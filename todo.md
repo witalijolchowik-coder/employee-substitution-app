@@ -56,3 +56,15 @@
 - [x] Test refresh functionality
 - [x] Verify date picker works correctly
 - [x] Check all text is in Polish
+
+## Theme Fix
+- [x] Override ThemedView to force dark background
+- [x] Remove system theme detection to always use dark theme
+
+## Picker Styling Fix
+- [x] Fix Zmiana picker to have dark background
+- [x] Fix Agencja picker to have dark background
+
+## UI Improvement
+- [x] Replace Zmiana Picker with segmented button group (D/M/N)
+- [ ] Replace Agencja Picker with better styled dropdown

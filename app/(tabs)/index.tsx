@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
+  Text,
   TextInput,
   Pressable,
   ScrollView,
@@ -210,7 +211,7 @@ Pozdrawiam,`;
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={[styles.container, { backgroundColor: backgroundColor }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -239,7 +240,7 @@ Pozdrawiam,`;
         <View style={styles.form}>
           {/* Absent Employee */}
           <View style={styles.fieldContainer}>
-            <ThemedText style={styles.label}>Nieobecny pracownik</ThemedText>
+            <Text style={styles.label}>Nieobecny pracownik</Text>
             <TextInput
               style={[styles.input, { color: textColor, backgroundColor: surfaceColor }]}
               value={absentEmployeeInput}
@@ -251,24 +252,33 @@ Pozdrawiam,`;
 
           {/* Shift */}
           <View style={styles.fieldContainer}>
-            <ThemedText style={styles.label}>Zmiana</ThemedText>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={shift}
-                onValueChange={setShift}
-                style={[styles.picker, { color: textColor }]}
-                dropdownIconColor={textColor}
-              >
-                <Picker.Item label="D" value="D" />
-                <Picker.Item label="M" value="M" />
-                <Picker.Item label="N" value="N" />
-              </Picker>
+            <Text style={styles.label}>Zmiana</Text>
+            <View style={styles.segmentedControl}>
+              {["D", "M", "N"].map((shiftOption) => (
+                <Pressable
+                  key={shiftOption}
+                  style={[
+                    styles.segmentButton,
+                    shift === shiftOption && styles.segmentButtonActive,
+                  ]}
+                  onPress={() => setShift(shiftOption)}
+                >
+                  <Text
+                    style={[
+                      styles.segmentButtonText,
+                      shift === shiftOption && styles.segmentButtonTextActive,
+                    ]}
+                  >
+                    {shiftOption}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </View>
 
           {/* Substitute Employee */}
           <View style={styles.fieldContainer}>
-            <ThemedText style={styles.label}>Zastępca</ThemedText>
+            <Text style={styles.label}>Zastępca</Text>
             <TextInput
               style={[styles.input, { color: textColor, backgroundColor: surfaceColor }]}
               value={substituteEmployeeInput}
@@ -281,8 +291,8 @@ Pozdrawiam,`;
           {/* Agency (conditional) */}
           {showAgencyField && (
             <View style={[styles.fieldContainer, styles.agencyFieldHighlight]}>
-              <ThemedText style={styles.label}>Agencja</ThemedText>
-              <View style={styles.pickerContainer}>
+              <Text style={styles.label}>Agencja</Text>
+              <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
                 <Picker
                   selectedValue={selectedAgency}
                   onValueChange={setSelectedAgency}
@@ -300,7 +310,7 @@ Pozdrawiam,`;
 
           {/* Date */}
           <View style={styles.fieldContainer}>
-            <ThemedText style={styles.label}>Data</ThemedText>
+            <Text style={styles.label}>Data</Text>
             <Pressable
               style={[styles.input, styles.dateInput, { backgroundColor: surfaceColor }]}
               onPress={() => setShowDatePicker(true)}
@@ -333,7 +343,7 @@ Pozdrawiam,`;
           </Pressable>
         </View>
       </ScrollView>
-    </ThemedView>
+    </View>
   );
 }
 
@@ -379,7 +389,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pickerContainer: {
-    backgroundColor: "#1E1E1E",
     borderRadius: 8,
     overflow: "hidden",
     minHeight: 56,
@@ -411,7 +420,34 @@ const styles = StyleSheet.create({
   },
   sendButtonText: {
     color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  segmentedControl: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: "#1E1E1E",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
+  },
+  segmentButtonActive: {
+    backgroundColor: "#2196F3",
+    borderColor: "#2196F3",
+  },
+  segmentButtonText: {
+    color: "#B3B3B3",
     fontSize: 16,
     fontWeight: "600",
+  },
+  segmentButtonTextActive: {
+    color: "#FFFFFF",
   },
 });
