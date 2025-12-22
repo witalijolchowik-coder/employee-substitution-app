@@ -21,6 +21,8 @@ export default function TabLayout() {
         tabBarStyle: {
           paddingBottom: insets.bottom,
           height: 49 + insets.bottom, // Default tab bar height (49) + safe area
+          backgroundColor: Colors[colorScheme ?? "light"].background,
+          borderTopColor: "#2C2C2C",
         },
       }}
     >

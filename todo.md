@@ -45,6 +45,7 @@
 - [x] Style button with Material Blue
 - [x] Style agency field with amber border highlight
 - [x] Ensure proper contrast for accessibility
+- [x] Fix dark theme application to force dark colors
 
 ## Testing & Polish
 - [x] Test with all employee names from list

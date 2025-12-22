@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { Colors } from "@/constants/theme";
 
 // GitHub Gist URLs
 const EMPLOYEES_URL =
@@ -59,8 +60,11 @@ interface Agency {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
+  // Force dark theme colors
+  const backgroundColor = Colors.dark.background;
+  const textColor = Colors.dark.text;
+  const surfaceColor = "#1E1E1E";
+  const labelColor = "#B3B3B3";
 
   // Data state
   const [employees, setEmployees] = useState<string[]>(FALLBACK_EMPLOYEES);
@@ -237,7 +241,7 @@ Pozdrawiam,`;
           <View style={styles.fieldContainer}>
             <ThemedText style={styles.label}>Nieobecny pracownik</ThemedText>
             <TextInput
-              style={[styles.input, { color: textColor }]}
+              style={[styles.input, { color: textColor, backgroundColor: surfaceColor }]}
               value={absentEmployeeInput}
               onChangeText={setAbsentEmployeeInput}
               placeholder="Wybierz lub wpisz..."
@@ -266,7 +270,7 @@ Pozdrawiam,`;
           <View style={styles.fieldContainer}>
             <ThemedText style={styles.label}>Zastępca</ThemedText>
             <TextInput
-              style={[styles.input, { color: textColor }]}
+              style={[styles.input, { color: textColor, backgroundColor: surfaceColor }]}
               value={substituteEmployeeInput}
               onChangeText={setSubstituteEmployeeInput}
               placeholder="Wybierz lub wpisz..."
@@ -298,7 +302,7 @@ Pozdrawiam,`;
           <View style={styles.fieldContainer}>
             <ThemedText style={styles.label}>Data</ThemedText>
             <Pressable
-              style={[styles.input, styles.dateInput]}
+              style={[styles.input, styles.dateInput, { backgroundColor: surfaceColor }]}
               onPress={() => setShowDatePicker(true)}
             >
               <ThemedText style={{ color: textColor }}>{formatDate(date)}</ThemedText>
@@ -364,7 +368,6 @@ const styles = StyleSheet.create({
     color: "#B3B3B3",
   },
   input: {
-    backgroundColor: "#1E1E1E",
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
@@ -379,9 +382,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#1E1E1E",
     borderRadius: 8,
     overflow: "hidden",
+    minHeight: 56,
+    justifyContent: "center",
   },
   picker: {
     height: 56,
+    color: "#FFFFFF",
   },
   agencyFieldHighlight: {
     borderWidth: 2,
