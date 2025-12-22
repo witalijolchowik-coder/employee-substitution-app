@@ -73,3 +73,8 @@
 - [x] Process ID Logistics logo to have transparent background
 - [x] Add logo to top of the screen
 - [x] Adjust spacing to balance screen layout
+
+## New App Icon
+- [x] Generate new icon with ID Logistics red arrow motif
+- [x] Update all icon files (icon.png, splash-icon.png, etc.)
+- [x] Update app.config.ts with new logo URL
