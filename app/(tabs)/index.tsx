@@ -3,6 +3,7 @@ import {
   StyleSheet,
   View,
   Text,
+  Image,
   TextInput,
   Pressable,
   ScrollView,
@@ -222,13 +223,22 @@ Pozdrawiam,`;
           },
         ]}
       >
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("@/assets/images/id-logistics-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.headerTitle}>
+          <ThemedText type="title" style={{ color: textColor }}>
             Informacje o zastępstwie
           </ThemedText>
-          <Pressable onPress={handleRefresh} disabled={refreshing}>
-            {refreshing ? (
+          <Pressable onPress={handleRefresh} disabled={loading || refreshing}>
+            {loading ? (
               <ActivityIndicator size="small" color={textColor} />
             ) : (
               <Ionicons name="refresh" size={24} color={textColor} />
@@ -350,6 +360,15 @@ Pozdrawiam,`;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  logoContainer: {
+    alignItems: "center",
+    paddingVertical: 20,
+    marginBottom: 10,
+  },
+  logo: {
+    width: 200,
+    height: 80,
   },
   scrollView: {
     flex: 1,

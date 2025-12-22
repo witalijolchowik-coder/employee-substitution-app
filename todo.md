@@ -68,3 +68,8 @@
 ## UI Improvement
 - [x] Replace Zmiana Picker with segmented button group (D/M/N)
 - [ ] Replace Agencja Picker with better styled dropdown
+
+## Layout Improvement
+- [x] Process ID Logistics logo to have transparent background
+- [x] Add logo to top of the screen
+- [x] Adjust spacing to balance screen layout
