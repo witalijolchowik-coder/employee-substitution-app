@@ -1,278 +1,411 @@
-import { Image } from "expo-image";
-import { useRouter, Link } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet } from "react-native";
+import { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  Pressable,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Linking from "expo-linking";
+import { Ionicons } from "@expo/vector-icons";
 
-import { HelloWave } from "@/components/hello-wave";
-import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { getLoginUrl } from "@/constants/oauth";
-import { useAuth } from "@/hooks/use-auth";
+import { useThemeColor } from "@/hooks/use-theme-color";
+
+// GitHub Gist URLs
+const EMPLOYEES_URL =
+  "https://gist.githubusercontent.com/witalijolchowik-coder/3f56631351c945b27d54f05239ecd7ea/raw/44aa34f8ca86c46927214a259ec981e05621304c/gistfile1.txt";
+const AGENCIES_URL =
+  "https://gist.githubusercontent.com/witalijolchowik-coder/3f56631351c945b27d54f05239ecd7ea/raw/44aa34f8ca86c46927214a259ec981e05621304c/gistfile2.txt";
+
+// Fallback data
+const FALLBACK_EMPLOYEES = [
+  "Dzina Siarbolina",
+  "Robel Daniel Eticha",
+  "Oleksandr Osetynskyi",
+  "Nataliia Sira",
+  "Iryna Podakina",
+  "Denys Pidrivnyi",
+  "Tetiana Holovchenko",
+  "Ivan Panasiuk",
+  "Valeriia Mysniaieva",
+  "Andrii Potiiev",
+  "Kateryna Naumchuk",
+  "Karyna Nelina",
+  "Andrii Stovbchatyi",
+  "Artem Fedoreikov",
+];
+
+const FALLBACK_AGENCIES = [
+  { name: "OPUS", email: "olena.opusapt@gmail.com" },
+  { name: "Fast Service", email: "v.shepel@fast-service.com.pl" },
+  { name: "Topping Work", email: "veranika.dubrouskaya@topping-work.pl" },
+  { name: "Work Unit", email: "koordynator-idl@workunit.pl" },
+  { name: "MadMax", email: "k.volkova@madmaxwork.pl" },
+  { name: "MS Group", email: "v.mutovchy@msgroup.hr" },
+];
+
+interface Agency {
+  name: string;
+  email: string;
+}
 
 export default function HomeScreen() {
-  const { user, loading, isAuthenticated, logout } = useAuth();
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const backgroundColor = useThemeColor({}, "background");
+  const textColor = useThemeColor({}, "text");
 
+  // Data state
+  const [employees, setEmployees] = useState<string[]>(FALLBACK_EMPLOYEES);
+  const [agencies, setAgencies] = useState<Agency[]>(FALLBACK_AGENCIES);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Form state
+  const [absentEmployee, setAbsentEmployee] = useState("");
+  const [absentEmployeeInput, setAbsentEmployeeInput] = useState("");
+  const [shift, setShift] = useState("D");
+  const [substituteEmployee, setSubstituteEmployee] = useState("");
+  const [substituteEmployeeInput, setSubstituteEmployeeInput] = useState("");
+  const [selectedAgency, setSelectedAgency] = useState("");
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // UI state
+  const [showAbsentDropdown, setShowAbsentDropdown] = useState(false);
+  const [showSubstituteDropdown, setShowSubstituteDropdown] = useState(false);
+  const [showAgencyField, setShowAgencyField] = useState(false);
+
+  // Load cached data on mount
   useEffect(() => {
-    console.log("[HomeScreen] Auth state:", {
-      hasUser: !!user,
-      loading,
-      isAuthenticated,
-      user: user ? { id: user.id, openId: user.openId, name: user.name, email: user.email } : null,
-    });
-  }, [user, loading, isAuthenticated]);
+    loadCachedData();
+    fetchData();
+  }, []);
 
-  const handleLogin = async () => {
+  // Check if substitute is from external agency
+  useEffect(() => {
+    const isFromList = employees.includes(substituteEmployeeInput);
+    setShowAgencyField(!isFromList && substituteEmployeeInput.length > 0);
+    if (isFromList) {
+      setSelectedAgency("");
+    }
+  }, [substituteEmployeeInput, employees]);
+
+  const loadCachedData = async () => {
     try {
-      console.log("[Auth] Login button clicked");
-      setIsLoggingIn(true);
-      const loginUrl = getLoginUrl();
-      console.log("[Auth] Generated login URL:", loginUrl);
+      const cachedEmployees = await AsyncStorage.getItem("employee_list_cache");
+      const cachedAgencies = await AsyncStorage.getItem("agency_list_cache");
 
-      // On web, use direct redirect in same tab
-      // On mobile, use WebBrowser to open OAuth in a separate context
-      if (Platform.OS === "web") {
-        console.log("[Auth] Web platform: redirecting to OAuth in same tab...");
-        window.location.href = loginUrl;
-        return;
+      if (cachedEmployees) {
+        setEmployees(JSON.parse(cachedEmployees));
       }
-
-      // Mobile: Open OAuth URL in browser
-      // The OAuth server will redirect to our deep link (manusapp://oauth/callback?code=...&state=...)
-      console.log("[Auth] Opening OAuth URL in browser...");
-      const result = await WebBrowser.openAuthSessionAsync(
-        loginUrl,
-        undefined, // Deep link is already configured in getLoginUrl, so no need to specify here
-        {
-          preferEphemeralSession: false,
-          showInRecents: true,
-        },
-      );
-
-      console.log("[Auth] WebBrowser result:", result);
-      if (result.type === "cancel") {
-        console.log("[Auth] OAuth cancelled by user");
-      } else if (result.type === "dismiss") {
-        console.log("[Auth] OAuth dismissed");
-      } else if (result.type === "success" && result.url) {
-        console.log("[Auth] OAuth session successful, navigating to callback:", result.url);
-        // Extract code and state from the URL
-        try {
-          // Parse the URL - it might be exp:// or a regular URL
-          let url: URL;
-          if (result.url.startsWith("exp://") || result.url.startsWith("exps://")) {
-            // For exp:// URLs, we need to parse them differently
-            // Format: exp://192.168.31.156:8081/--/oauth/callback?code=...&state=...
-            const urlStr = result.url.replace(/^exp(s)?:\/\//, "http://");
-            url = new URL(urlStr);
-          } else {
-            url = new URL(result.url);
-          }
-
-          const code = url.searchParams.get("code");
-          const state = url.searchParams.get("state");
-          const error = url.searchParams.get("error");
-
-          console.log("[Auth] Extracted params from callback URL:", {
-            code: code?.substring(0, 20) + "...",
-            state: state?.substring(0, 20) + "...",
-            error,
-          });
-
-          if (error) {
-            console.error("[Auth] OAuth error in callback:", error);
-            return;
-          }
-
-          if (code && state) {
-            // Navigate to callback route with params
-            console.log("[Auth] Navigating to callback route with params...");
-            router.push({
-              pathname: "/oauth/callback" as any,
-              params: { code, state },
-            });
-          } else {
-            console.error("[Auth] Missing code or state in callback URL");
-          }
-        } catch (err) {
-          console.error("[Auth] Failed to parse callback URL:", err, result.url);
-          // Fallback: try parsing with regex
-          const codeMatch = result.url.match(/[?&]code=([^&]+)/);
-          const stateMatch = result.url.match(/[?&]state=([^&]+)/);
-
-          if (codeMatch && stateMatch) {
-            const code = decodeURIComponent(codeMatch[1]);
-            const state = decodeURIComponent(stateMatch[1]);
-            console.log("[Auth] Fallback: extracted params via regex, navigating...");
-            router.push({
-              pathname: "/oauth/callback" as any,
-              params: { code, state },
-            });
-          } else {
-            console.error("[Auth] Could not extract code/state from URL");
-          }
-        }
+      if (cachedAgencies) {
+        setAgencies(JSON.parse(cachedAgencies));
       }
     } catch (error) {
-      console.error("[Auth] Login error:", error);
-    } finally {
-      setIsLoggingIn(false);
+      console.error("Error loading cached data:", error);
     }
   };
 
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
-      headerImage={
-        <Image
-          source={require("@/assets/images/partial-react-logo.png")}
-          style={styles.reactLogo}
-        />
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch employees
+      const employeesResponse = await fetch(EMPLOYEES_URL);
+      const employeesData = await employeesResponse.json();
+      setEmployees(employeesData);
+      await AsyncStorage.setItem("employee_list_cache", JSON.stringify(employeesData));
+
+      // Fetch agencies
+      const agenciesResponse = await fetch(AGENCIES_URL);
+      const agenciesData = await agenciesResponse.json();
+      setAgencies(agenciesData);
+      await AsyncStorage.setItem("agency_list_cache", JSON.stringify(agenciesData));
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      // Keep fallback or cached data
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
+
+  const formatDate = (date: Date): string => {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
+
+  const handleSendEmail = () => {
+    // Validate required fields
+    if (!absentEmployeeInput || !shift || !substituteEmployeeInput) {
+      alert("Proszę wypełnić wszystkie pola");
+      return;
+    }
+
+    if (showAgencyField && !selectedAgency) {
+      alert("Proszę wybrać agencję");
+      return;
+    }
+
+    // Build email
+    const formattedDate = formatDate(date);
+    const subject = `Informacje o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
+
+    // Build substitute name with agency if applicable
+    let substituteName = substituteEmployeeInput;
+    let agencyEmail = "";
+
+    if (showAgencyField && selectedAgency) {
+      const agency = agencies.find((a) => a.name === selectedAgency);
+      if (agency) {
+        substituteName = `${substituteEmployeeInput} (${agency.name})`;
+        agencyEmail = agency.email;
       }
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.authContainer}>
-        {loading ? (
-          <ActivityIndicator />
-        ) : isAuthenticated && user ? (
-          <ThemedView style={styles.userInfo}>
-            <ThemedText type="subtitle">Logged in as</ThemedText>
-            <ThemedText type="defaultSemiBold">{user.name || user.email || user.openId}</ThemedText>
-            <Pressable onPress={logout} style={styles.logoutButton}>
-              <ThemedText style={styles.logoutText}>Logout</ThemedText>
-            </Pressable>
-          </ThemedView>
-        ) : (
-          <Pressable
-            onPress={handleLogin}
-            disabled={isLoggingIn}
-            style={[styles.loginButton, isLoggingIn && styles.loginButtonDisabled]}
-          >
-            {isLoggingIn ? (
-              <ActivityIndicator color="#fff" />
+    }
+
+    const body = `Dzień dobry
+
+Chciałbym poinformować, że ${absentEmployeeInput} nie będzie obecny (-a) w pracy ${formattedDate} na zmianie ${shift}. Na jego (-ej) miejsce wejdzie ${substituteName}.
+
+Proszę o uwzględnienie tej zmiany i wprowadzenie odpowiedniej korekty do harmonogramu.
+
+Pozdrawiam,`;
+
+    // Build recipient lists
+    const toRecipients = [
+      "xdr1-lead-out@id-logistics.com",
+      "xdr1-flowcontrol@id-logistics.com",
+    ];
+    const ccRecipients = ["mcal@id-logistics.com"];
+    if (agencyEmail) {
+      ccRecipients.push(agencyEmail);
+    }
+
+    // Create mailto URL
+    const mailtoUrl = `mailto:${toRecipients.join(",")}?cc=${ccRecipients.join(",")}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    // Open email client
+    Linking.openURL(mailtoUrl).catch((err) => {
+      console.error("Error opening email client:", err);
+      alert("Nie można otworzyć klienta poczty");
+    });
+  };
+
+  return (
+    <ThemedView style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top, 20) + 10,
+            paddingBottom: Math.max(insets.bottom, 20) + 10,
+          },
+        ]}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.headerTitle}>
+            Informacje o zastępstwie
+          </ThemedText>
+          <Pressable onPress={handleRefresh} disabled={refreshing}>
+            {refreshing ? (
+              <ActivityIndicator size="small" color={textColor} />
             ) : (
-              <ThemedText style={styles.loginText}>Login</ThemedText>
+              <Ionicons name="refresh" size={24} color={textColor} />
             )}
           </Pressable>
-        )}
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{" "}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: "cmd + d",
-              android: "cmd + m",
-              web: "F12",
-            })}
-          </ThemedText>{" "}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert("Action pressed")} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert("Share pressed")}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert("Delete pressed")}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+        </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{" "}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{" "}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{" "}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {/* Form */}
+        <View style={styles.form}>
+          {/* Absent Employee */}
+          <View style={styles.fieldContainer}>
+            <ThemedText style={styles.label}>Nieobecny pracownik</ThemedText>
+            <TextInput
+              style={[styles.input, { color: textColor }]}
+              value={absentEmployeeInput}
+              onChangeText={setAbsentEmployeeInput}
+              placeholder="Wybierz lub wpisz..."
+              placeholderTextColor="#6B6B6B"
+            />
+          </View>
+
+          {/* Shift */}
+          <View style={styles.fieldContainer}>
+            <ThemedText style={styles.label}>Zmiana</ThemedText>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={shift}
+                onValueChange={setShift}
+                style={[styles.picker, { color: textColor }]}
+                dropdownIconColor={textColor}
+              >
+                <Picker.Item label="D" value="D" />
+                <Picker.Item label="M" value="M" />
+                <Picker.Item label="N" value="N" />
+              </Picker>
+            </View>
+          </View>
+
+          {/* Substitute Employee */}
+          <View style={styles.fieldContainer}>
+            <ThemedText style={styles.label}>Zastępca</ThemedText>
+            <TextInput
+              style={[styles.input, { color: textColor }]}
+              value={substituteEmployeeInput}
+              onChangeText={setSubstituteEmployeeInput}
+              placeholder="Wybierz lub wpisz..."
+              placeholderTextColor="#6B6B6B"
+            />
+          </View>
+
+          {/* Agency (conditional) */}
+          {showAgencyField && (
+            <View style={[styles.fieldContainer, styles.agencyFieldHighlight]}>
+              <ThemedText style={styles.label}>Agencja</ThemedText>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedAgency}
+                  onValueChange={setSelectedAgency}
+                  style={[styles.picker, { color: textColor }]}
+                  dropdownIconColor={textColor}
+                >
+                  <Picker.Item label="Wybierz agencję..." value="" />
+                  {agencies.map((agency) => (
+                    <Picker.Item key={agency.name} label={agency.name} value={agency.name} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          )}
+
+          {/* Date */}
+          <View style={styles.fieldContainer}>
+            <ThemedText style={styles.label}>Data</ThemedText>
+            <Pressable
+              style={[styles.input, styles.dateInput]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <ThemedText style={{ color: textColor }}>{formatDate(date)}</ThemedText>
+              <Ionicons name="calendar-outline" size={20} color={textColor} />
+            </Pressable>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={(event: any, selectedDate?: Date) => {
+                setShowDatePicker(Platform.OS === "ios");
+                if (selectedDate) {
+                  setDate(selectedDate);
+                }
+              }}
+            />
+          )}
+
+          {/* Send Button */}
+          <Pressable
+            style={({ pressed }) => [styles.sendButton, pressed && styles.sendButtonPressed]}
+            onPress={handleSendEmail}
+          >
+            <ThemedText style={styles.sendButtonText}>Wyślij e-mail</ThemedText>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+  },
+  header: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 24,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  form: {
+    gap: 16,
+  },
+  fieldContainer: {
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  label: {
+    fontSize: 14,
+    color: "#B3B3B3",
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-  },
-  authContainer: {
-    marginBottom: 16,
+  input: {
+    backgroundColor: "#1E1E1E",
+    borderRadius: 8,
     padding: 16,
-    borderRadius: 8,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    fontSize: 16,
+    minHeight: 56,
   },
-  userInfo: {
-    gap: 8,
+  dateInput: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  loginButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+  pickerContainer: {
+    backgroundColor: "#1E1E1E",
     borderRadius: 8,
+    overflow: "hidden",
+  },
+  picker: {
+    height: 56,
+  },
+  agencyFieldHighlight: {
+    borderWidth: 2,
+    borderColor: "#FF6F00",
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: "#2A2416",
+  },
+  sendButton: {
+    backgroundColor: "#2196F3",
+    borderRadius: 12,
+    padding: 16,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44,
+    minHeight: 56,
+    marginTop: 8,
   },
-  loginButtonDisabled: {
-    opacity: 0.6,
+  sendButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
   },
-  loginText: {
-    color: "#fff",
+  sendButtonText: {
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
-  },
-  logoutButton: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    backgroundColor: "rgba(255, 59, 48, 0.1)",
-  },
-  logoutText: {
-    color: "#FF3B30",
-    fontSize: 14,
-    fontWeight: "500",
   },
 });

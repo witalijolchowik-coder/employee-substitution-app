@@ -1,28 +1,27 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Material Design 3 Dark Theme for Employee Substitution App
  */
 
 import { Platform } from "react-native";
 
-const tintColorLight = "#0a7ea4";
-const tintColorDark = "#fff";
+const tintColorLight = "#2196F3"; // Material Blue
+const tintColorDark = "#2196F3"; // Material Blue (consistent in dark mode)
 
 export const Colors = {
   light: {
     text: "#11181C",
-    background: "#fff",
+    background: "#FFFFFF",
     tint: tintColorLight,
     icon: "#687076",
     tabIconDefault: "#687076",
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: "#ECEDEE",
-    background: "#151718",
-    tint: tintColorDark,
-    icon: "#9BA1A6",
-    tabIconDefault: "#9BA1A6",
+    text: "#FFFFFF", // Primary text - white
+    background: "#121212", // Primary background - very dark gray
+    tint: tintColorDark, // Material Blue accent
+    icon: "#B3B3B3", // Light gray for icons
+    tabIconDefault: "#6B6B6B", // Darker gray for inactive icons
     tabIconSelected: tintColorDark,
   },
 };
