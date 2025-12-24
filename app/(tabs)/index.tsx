@@ -9,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  FlatList,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -60,6 +61,69 @@ interface Agency {
   email: string;
 }
 
+// Autocomplete dropdown component
+function AutocompleteDropdown({
+  value,
+  onChangeText,
+  placeholder,
+  data,
+  onSelect,
+  surfaceColor,
+  textColor,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+  data: string[];
+  onSelect: (item: string) => void;
+  surfaceColor: string;
+  textColor: string;
+}) {
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Filter data based on input
+  const filteredData = data.filter((item) =>
+    item.toLowerCase().includes(value.toLowerCase())
+  );
+
+  return (
+    <View style={styles.autocompleteContainer}>
+      <TextInput
+        style={[styles.input, { color: textColor, backgroundColor: surfaceColor }]}
+        value={value}
+        onChangeText={(text) => {
+          onChangeText(text);
+          setShowDropdown(text.length > 0);
+        }}
+        placeholder={placeholder}
+        placeholderTextColor="#6B6B6B"
+        onFocus={() => setShowDropdown(value.length > 0 || data.length > 0)}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+      />
+      {showDropdown && filteredData.length > 0 && (
+        <View style={[styles.dropdownList, { backgroundColor: surfaceColor }]}>
+          <FlatList
+            data={filteredData}
+            keyExtractor={(item) => item}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <Pressable
+                style={styles.dropdownItem}
+                onPress={() => {
+                  onSelect(item);
+                  setShowDropdown(false);
+                }}
+              >
+                <Text style={{ color: textColor, fontSize: 16 }}>{item}</Text>
+              </Pressable>
+            )}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   // Force dark theme colors
@@ -76,17 +140,13 @@ export default function HomeScreen() {
 
   // Form state
   const [absentEmployee, setAbsentEmployee] = useState("");
-  const [absentEmployeeInput, setAbsentEmployeeInput] = useState("");
   const [shift, setShift] = useState("D");
   const [substituteEmployee, setSubstituteEmployee] = useState("");
-  const [substituteEmployeeInput, setSubstituteEmployeeInput] = useState("");
   const [selectedAgency, setSelectedAgency] = useState("");
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // UI state
-  const [showAbsentDropdown, setShowAbsentDropdown] = useState(false);
-  const [showSubstituteDropdown, setShowSubstituteDropdown] = useState(false);
   const [showAgencyField, setShowAgencyField] = useState(false);
 
   // Load cached data on mount
@@ -97,12 +157,12 @@ export default function HomeScreen() {
 
   // Check if substitute is from external agency
   useEffect(() => {
-    const isFromList = employees.includes(substituteEmployeeInput);
-    setShowAgencyField(!isFromList && substituteEmployeeInput.length > 0);
+    const isFromList = employees.includes(substituteEmployee);
+    setShowAgencyField(!isFromList && substituteEmployee.length > 0);
     if (isFromList) {
       setSelectedAgency("");
     }
-  }, [substituteEmployeeInput, employees]);
+  }, [substituteEmployee, employees]);
 
   const loadCachedData = async () => {
     try {
@@ -157,7 +217,7 @@ export default function HomeScreen() {
 
   const handleSendEmail = () => {
     // Validate required fields
-    if (!absentEmployeeInput || !shift || !substituteEmployeeInput) {
+    if (!absentEmployee || !shift || !substituteEmployee) {
       alert("Proszę wypełnić wszystkie pola");
       return;
     }
@@ -172,20 +232,20 @@ export default function HomeScreen() {
     const subject = `Informacje o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
 
     // Build substitute name with agency if applicable
-    let substituteName = substituteEmployeeInput;
+    let substituteName = substituteEmployee;
     let agencyEmail = "";
 
     if (showAgencyField && selectedAgency) {
       const agency = agencies.find((a) => a.name === selectedAgency);
       if (agency) {
-        substituteName = `${substituteEmployeeInput} (${agency.name})`;
+        substituteName = `${substituteEmployee} (${agency.name})`;
         agencyEmail = agency.email;
       }
     }
 
     const body = `Dzień dobry
 
-Chciałbym poinformować, że ${absentEmployeeInput} nie będzie obecny (-a) w pracy ${formattedDate} na zmianie ${shift}. Na jego (-ej) miejsce wejdzie ${substituteName}.
+Chciałbym poinformować, że ${absentEmployee} nie będzie obecny (-a) w pracy ${formattedDate} na zmianie ${shift}. Na jego (-ej) miejsce wejdzie ${substituteName}.
 
 Proszę o uwzględnienie tej zmiany i wprowadzenie odpowiedniej korekty do harmonogramu.
 
@@ -222,6 +282,7 @@ Pozdrawiam,`;
             paddingBottom: Math.max(insets.bottom, 20) + 10,
           },
         ]}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Logo */}
         <View style={styles.logoContainer}>
@@ -251,19 +312,15 @@ Pozdrawiam,`;
           {/* Absent Employee */}
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Nieobecny pracownik</Text>
-            <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
-              <Picker
-                selectedValue={absentEmployeeInput}
-                onValueChange={setAbsentEmployeeInput}
-                style={[styles.picker, { color: textColor }]}
-                dropdownIconColor={textColor}
-              >
-                <Picker.Item label="Wybierz pracownika..." value="" />
-                {employees.map((employee) => (
-                  <Picker.Item key={employee} label={employee} value={employee} />
-                ))}
-              </Picker>
-            </View>
+            <AutocompleteDropdown
+              value={absentEmployee}
+              onChangeText={setAbsentEmployee}
+              placeholder="Wybierz lub wpisz..."
+              data={employees}
+              onSelect={setAbsentEmployee}
+              surfaceColor={surfaceColor}
+              textColor={textColor}
+            />
           </View>
 
           {/* Shift */}
@@ -295,19 +352,15 @@ Pozdrawiam,`;
           {/* Substitute Employee */}
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Zastępca</Text>
-            <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
-              <Picker
-                selectedValue={substituteEmployeeInput}
-                onValueChange={setSubstituteEmployeeInput}
-                style={[styles.picker, { color: textColor }]}
-                dropdownIconColor={textColor}
-              >
-                <Picker.Item label="Wybierz lub wpisz..." value="" />
-                {employees.map((employee) => (
-                  <Picker.Item key={employee} label={employee} value={employee} />
-                ))}
-              </Picker>
-            </View>
+            <AutocompleteDropdown
+              value={substituteEmployee}
+              onChangeText={setSubstituteEmployee}
+              placeholder="Wybierz lub wpisz..."
+              data={employees}
+              onSelect={setSubstituteEmployee}
+              surfaceColor={surfaceColor}
+              textColor={textColor}
+            />
           </View>
 
           {/* Agency (conditional) */}
@@ -413,6 +466,28 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     minHeight: 56,
+  },
+  autocompleteContainer: {
+    position: "relative",
+    zIndex: 1,
+  },
+  dropdownList: {
+    borderRadius: 8,
+    marginTop: -4,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
+    borderTopWidth: 0,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2C2C2C",
   },
   dateInput: {
     flexDirection: "row",
