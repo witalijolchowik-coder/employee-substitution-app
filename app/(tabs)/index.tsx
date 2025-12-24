@@ -251,13 +251,19 @@ Pozdrawiam,`;
           {/* Absent Employee */}
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Nieobecny pracownik</Text>
-            <TextInput
-              style={[styles.input, { color: textColor, backgroundColor: surfaceColor }]}
-              value={absentEmployeeInput}
-              onChangeText={setAbsentEmployeeInput}
-              placeholder="Wybierz lub wpisz..."
-              placeholderTextColor="#6B6B6B"
-            />
+            <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
+              <Picker
+                selectedValue={absentEmployeeInput}
+                onValueChange={setAbsentEmployeeInput}
+                style={[styles.picker, { color: textColor }]}
+                dropdownIconColor={textColor}
+              >
+                <Picker.Item label="Wybierz pracownika..." value="" />
+                {employees.map((employee) => (
+                  <Picker.Item key={employee} label={employee} value={employee} />
+                ))}
+              </Picker>
+            </View>
           </View>
 
           {/* Shift */}
@@ -289,13 +295,19 @@ Pozdrawiam,`;
           {/* Substitute Employee */}
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Zastępca</Text>
-            <TextInput
-              style={[styles.input, { color: textColor, backgroundColor: surfaceColor }]}
-              value={substituteEmployeeInput}
-              onChangeText={setSubstituteEmployeeInput}
-              placeholder="Wybierz lub wpisz..."
-              placeholderTextColor="#6B6B6B"
-            />
+            <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
+              <Picker
+                selectedValue={substituteEmployeeInput}
+                onValueChange={setSubstituteEmployeeInput}
+                style={[styles.picker, { color: textColor }]}
+                dropdownIconColor={textColor}
+              >
+                <Picker.Item label="Wybierz lub wpisz..." value="" />
+                {employees.map((employee) => (
+                  <Picker.Item key={employee} label={employee} value={employee} />
+                ))}
+              </Picker>
+            </View>
           </View>
 
           {/* Agency (conditional) */}
@@ -419,10 +431,10 @@ const styles = StyleSheet.create({
   },
   agencyFieldHighlight: {
     borderWidth: 2,
-    borderColor: "#FF6F00",
+    borderColor: "#2196F3",
     borderRadius: 8,
     padding: 8,
-    backgroundColor: "#2A2416",
+    backgroundColor: "#1E1E1E",
   },
   sendButton: {
     backgroundColor: "#2196F3",
