@@ -86,6 +86,12 @@ function AutocompleteDropdown({
     item.toLowerCase().includes(value.toLowerCase())
   );
 
+  const handleSelectItem = (item: string) => {
+    onChangeText(item); // Update the input field
+    onSelect(item); // Notify parent
+    setShowDropdown(false); // Close dropdown
+  };
+
   return (
     <View style={styles.autocompleteContainer}>
       <TextInput
@@ -109,10 +115,7 @@ function AutocompleteDropdown({
             renderItem={({ item }) => (
               <Pressable
                 style={styles.dropdownItem}
-                onPress={() => {
-                  onSelect(item);
-                  setShowDropdown(false);
-                }}
+                onPress={() => handleSelectItem(item)}
               >
                 <Text style={{ color: textColor, fontSize: 16 }}>{item}</Text>
               </Pressable>
@@ -293,12 +296,14 @@ Pozdrawiam,`;
           />
         </View>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <ThemedText type="title" style={{ color: textColor }}>
-            Informacje o zastępstwie
-          </ThemedText>
-          <Pressable onPress={handleRefresh} disabled={loading || refreshing}>
+        {/* Header Title */}
+        <View style={styles.headerTitleContainer}>
+          <Image
+            source={require("@/assets/images/header-title.png")}
+            style={styles.headerTitle}
+            resizeMode="contain"
+          />
+          <Pressable onPress={handleRefresh} disabled={loading || refreshing} style={styles.refreshButton}>
             {loading ? (
               <ActivityIndicator size="small" color={textColor} />
             ) : (
@@ -441,15 +446,23 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
   },
-  header: {
+  headerTitleContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 24,
+    position: "relative",
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
+    flex: 1,
+    height: 120,
+    width: "100%",
+  },
+  refreshButton: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    padding: 8,
   },
   form: {
     gap: 16,
