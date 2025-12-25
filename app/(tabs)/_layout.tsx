@@ -17,12 +17,8 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
         tabBarButton: HapticTab,
-        // Ensure tab bar respects bottom safe area for devices with home indicators
         tabBarStyle: {
-          paddingBottom: insets.bottom,
-          height: 49 + insets.bottom, // Default tab bar height (49) + safe area
-          backgroundColor: Colors[colorScheme ?? "light"].background,
-          borderTopColor: "#2C2C2C",
+          display: "none", // Hide tab bar completely
         },
       }}
     >

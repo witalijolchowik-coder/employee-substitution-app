@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Platform,
   FlatList,
+  Animated,
+  PanResponder,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -96,9 +98,9 @@ function AutocompleteDropdown({
   );
 
   const handleSelectItem = (item: string) => {
-    onChangeText(item); // Update the input field
-    onSelect(item); // Notify parent
-    setShowDropdown(false); // Close dropdown
+    onChangeText(item);
+    onSelect(item);
+    setShowDropdown(false);
   };
 
   return (
@@ -138,7 +140,6 @@ function AutocompleteDropdown({
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  // Force dark theme colors
   const backgroundColor = Colors.dark.background;
   const textColor = Colors.dark.text;
   const surfaceColor = "#1E1E1E";
@@ -221,20 +222,17 @@ export default function HomeScreen() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch employees
       const employeesResponse = await fetch(EMPLOYEES_URL);
       const employeesData = await employeesResponse.json();
       setEmployees(employeesData);
       await AsyncStorage.setItem("employee_list_cache", JSON.stringify(employeesData));
 
-      // Fetch agencies
       const agenciesResponse = await fetch(AGENCIES_URL);
       const agenciesData = await agenciesResponse.json();
       setAgencies(agenciesData);
       await AsyncStorage.setItem("agency_list_cache", JSON.stringify(agenciesData));
     } catch (error) {
       console.error("Error fetching data:", error);
-      // Keep fallback or cached data
     } finally {
       setLoading(false);
     }
@@ -254,7 +252,6 @@ export default function HomeScreen() {
   };
 
   const handleSendEmail = () => {
-    // Validate required fields
     if (!absentEmployee || !shift || !substituteEmployee) {
       alert("Proszę wypełnić wszystkie pola");
       return;
@@ -265,11 +262,9 @@ export default function HomeScreen() {
       return;
     }
 
-    // Build email
     const formattedDate = formatDate(date);
     const subject = `Informacje o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
 
-    // Build substitute name with agency if applicable
     let substituteName = substituteEmployee;
     let agencyEmail = "";
 
@@ -289,7 +284,6 @@ Proszę o uwzględnienie tej zmiany i wprowadzenie odpowiedniej korekty do harmo
 
 Pozdrawiam,`;
 
-    // Build recipient lists
     const toRecipients = [
       "xdr1-lead-out@id-logistics.com",
       "xdr1-flowcontrol@id-logistics.com",
@@ -299,16 +293,13 @@ Pozdrawiam,`;
       ccRecipients.push(agencyEmail);
     }
 
-    // Create mailto URL
     const mailtoUrl = `mailto:${toRecipients.join(",")}?cc=${ccRecipients.join(",")}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-    // Open email client
     Linking.openURL(mailtoUrl).catch((err) => {
       console.error("Error opening email client:", err);
       alert("Nie można otworzyć klienta poczty");
     });
 
-    // Add to journal
     const newEntry: JournalEntry = {
       id: Date.now().toString(),
       date: date,
@@ -322,7 +313,6 @@ Pozdrawiam,`;
     setJournalEntries(updatedEntries);
     saveJournalEntries(updatedEntries);
 
-    // Reset form
     setAbsentEmployee("");
     setShift("D");
     setSubstituteEmployee("");
@@ -337,14 +327,16 @@ Pozdrawiam,`;
   };
 
   if (currentPage === "journal") {
-    return <JournalScreen 
-      entries={journalEntries}
-      onDeleteEntry={deleteJournalEntry}
-      onBack={() => setCurrentPage("form")}
-      backgroundColor={backgroundColor}
-      textColor={textColor}
-      insets={insets}
-    />;
+    return (
+      <JournalScreen
+        entries={journalEntries}
+        onDeleteEntry={deleteJournalEntry}
+        onBack={() => setCurrentPage("form")}
+        backgroundColor={backgroundColor}
+        textColor={textColor}
+        insets={insets}
+      />
+    );
   }
 
   return (
@@ -537,7 +529,7 @@ function JournalScreen({
   return (
     <View style={[styles.journalContainer, { backgroundColor }]}>
       {/* Header */}
-      <View style={styles.journalHeader}>
+      <View style={[styles.journalHeader, { paddingTop: Math.max(insets.top, 20) }]}>
         <Text style={[styles.journalHeaderMonth, { color: textColor }]}>
           {sortedEntries.length > 0 ? getMonthName(sortedEntries[0].date) : "LISTOPAD"}
         </Text>
@@ -578,7 +570,7 @@ function JournalScreen({
   );
 }
 
-// Journal Entry Card Component
+// Journal Entry Card Component with Swipe to Delete
 function JournalEntryCard({
   entry,
   onDelete,
@@ -588,42 +580,67 @@ function JournalEntryCard({
   onDelete: (id: string) => void;
   textColor: string;
 }) {
-  const [swipeOffset, setSwipeOffset] = useState(0);
-
-  const handleSwipeLeft = () => {
-    if (swipeOffset < -100) {
-      onDelete(entry.id);
-    }
-  };
+  const [swipeX] = useState(new Animated.Value(0));
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderMove: (evt, gestureState) => {
+      if (gestureState.dx < 0) {
+        swipeX.setValue(Math.max(gestureState.dx, -100));
+      }
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      if (gestureState.dx < -50) {
+        Animated.timing(swipeX, {
+          toValue: -100,
+          duration: 200,
+          useNativeDriver: false,
+        }).start(() => {
+          onDelete(entry.id);
+        });
+      } else {
+        Animated.timing(swipeX, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: false,
+        }).start();
+      }
+    },
+  });
 
   return (
-    <Pressable
-      onLongPress={() => {
-        // Confirm delete
-        alert("Usunąć tę pozycję?");
-      // Simple delete on long press
-      onDelete(entry.id);
-      }}
-      style={styles.journalEntryCard}
-    >
-      <View style={styles.journalEntryContent}>
-        <View style={styles.journalEntryLeft}>
-          <Text style={[styles.journalEntryDate, { color: textColor }]}>
-            {entry.date.getDate()}
-          </Text>
-          <Text style={styles.journalEntryShift}>{entry.shift}</Text>
+    <View style={styles.journalEntryWrapper}>
+      <Animated.View
+        style={[
+          styles.journalEntryCard,
+          {
+            transform: [{ translateX: swipeX }],
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <View style={styles.journalEntryContent}>
+          <View style={styles.journalEntryLeft}>
+            <Text style={[styles.journalEntryDate, { color: textColor }]}>
+              {entry.date.getDate()}
+            </Text>
+            <Text style={styles.journalEntryShift}>{entry.shift}</Text>
+          </View>
+          <View style={styles.journalEntryRight}>
+            <Text style={[styles.journalEntryAbsent, { color: "#666666" }]}>
+              {entry.absentEmployee}
+            </Text>
+            <Text style={[styles.journalEntrySubstitute, { color: textColor }]}>
+              {entry.substituteEmployee}
+              {entry.agency ? ` (${entry.agency})` : ""}
+            </Text>
+          </View>
         </View>
-        <View style={styles.journalEntryRight}>
-          <Text style={[styles.journalEntryAbsent, { color: "#666666" }]}>
-            {entry.absentEmployee}
-          </Text>
-          <Text style={[styles.journalEntrySubstitute, { color: textColor }]}>
-            {entry.substituteEmployee}
-            {entry.agency ? ` (${entry.agency})` : ""}
-          </Text>
-        </View>
+      </Animated.View>
+      <View style={styles.journalEntryDeleteBackground}>
+        <Ionicons name="trash" size={24} color="#FF3B30" />
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -679,6 +696,8 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     minHeight: 56,
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
   },
   autocompleteContainer: {
     position: "relative",
@@ -712,6 +731,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     minHeight: 56,
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
   },
   picker: {
     height: 56,
@@ -806,11 +827,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
+  journalEntryWrapper: {
+    marginBottom: 12,
+    overflow: "hidden",
+    borderRadius: 12,
+  },
   journalEntryCard: {
     backgroundColor: "#1A2A3F",
     borderRadius: 12,
-    marginBottom: 12,
     overflow: "hidden",
+  },
+  journalEntryDeleteBackground: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    backgroundColor: "#FF3B30",
+    justifyContent: "center",
+    alignItems: "center",
   },
   journalEntryContent: {
     flexDirection: "row",
