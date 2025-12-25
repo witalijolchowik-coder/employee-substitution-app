@@ -61,6 +61,15 @@ interface Agency {
   email: string;
 }
 
+interface JournalEntry {
+  id: string;
+  date: Date;
+  shift: string;
+  absentEmployee: string;
+  substituteEmployee: string;
+  agency?: string;
+}
+
 // Autocomplete dropdown component
 function AutocompleteDropdown({
   value,
@@ -151,11 +160,14 @@ export default function HomeScreen() {
 
   // UI state
   const [showAgencyField, setShowAgencyField] = useState(false);
+  const [currentPage, setCurrentPage] = useState<"form" | "journal">("form");
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
 
   // Load cached data on mount
   useEffect(() => {
     loadCachedData();
     fetchData();
+    loadJournalEntries();
   }, []);
 
   // Check if substitute is from external agency
@@ -180,6 +192,29 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error("Error loading cached data:", error);
+    }
+  };
+
+  const loadJournalEntries = async () => {
+    try {
+      const cached = await AsyncStorage.getItem("journal_entries");
+      if (cached) {
+        const entries = JSON.parse(cached).map((e: any) => ({
+          ...e,
+          date: new Date(e.date),
+        }));
+        setJournalEntries(entries);
+      }
+    } catch (error) {
+      console.error("Error loading journal entries:", error);
+    }
+  };
+
+  const saveJournalEntries = async (entries: JournalEntry[]) => {
+    try {
+      await AsyncStorage.setItem("journal_entries", JSON.stringify(entries));
+    } catch (error) {
+      console.error("Error saving journal entries:", error);
     }
   };
 
@@ -272,7 +307,45 @@ Pozdrawiam,`;
       console.error("Error opening email client:", err);
       alert("Nie można otworzyć klienta poczty");
     });
+
+    // Add to journal
+    const newEntry: JournalEntry = {
+      id: Date.now().toString(),
+      date: date,
+      shift: shift,
+      absentEmployee: absentEmployee,
+      substituteEmployee: substituteEmployee,
+      agency: selectedAgency,
+    };
+
+    const updatedEntries = [newEntry, ...journalEntries];
+    setJournalEntries(updatedEntries);
+    saveJournalEntries(updatedEntries);
+
+    // Reset form
+    setAbsentEmployee("");
+    setShift("D");
+    setSubstituteEmployee("");
+    setSelectedAgency("");
+    setDate(new Date());
   };
+
+  const deleteJournalEntry = (id: string) => {
+    const updatedEntries = journalEntries.filter((e) => e.id !== id);
+    setJournalEntries(updatedEntries);
+    saveJournalEntries(updatedEntries);
+  };
+
+  if (currentPage === "journal") {
+    return <JournalScreen 
+      entries={journalEntries}
+      onDeleteEntry={deleteJournalEntry}
+      onBack={() => setCurrentPage("form")}
+      backgroundColor={backgroundColor}
+      textColor={textColor}
+      insets={insets}
+    />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: backgroundColor }]}>
@@ -421,9 +494,136 @@ Pozdrawiam,`;
           >
             <ThemedText style={styles.sendButtonText}>Wyślij e-mail</ThemedText>
           </Pressable>
+
+          {/* Journal Button */}
+          <Pressable
+            style={({ pressed }) => [styles.journalButton, pressed && styles.journalButtonPressed]}
+            onPress={() => setCurrentPage("journal")}
+          >
+            <ThemedText style={styles.journalButtonText}>Dziennik</ThemedText>
+          </Pressable>
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+// Journal Screen Component
+function JournalScreen({
+  entries,
+  onDeleteEntry,
+  onBack,
+  backgroundColor,
+  textColor,
+  insets,
+}: {
+  entries: JournalEntry[];
+  onDeleteEntry: (id: string) => void;
+  onBack: () => void;
+  backgroundColor: string;
+  textColor: string;
+  insets: any;
+}) {
+  const getMonthName = (date: Date): string => {
+    const months = [
+      "STYCZEŃ", "LUTY", "MARZEC", "KWIECIEŃ", "MAJ", "CZERWIEC",
+      "LIPIEC", "SIERPIEŃ", "WRZESIEŃ", "PAŹDZIERNIK", "LISTOPAD", "GRUDZIEŃ"
+    ];
+    return months[date.getMonth()];
+  };
+
+  const sortedEntries = [...entries].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  return (
+    <View style={[styles.journalContainer, { backgroundColor }]}>
+      {/* Header */}
+      <View style={styles.journalHeader}>
+        <Text style={[styles.journalHeaderMonth, { color: textColor }]}>
+          {sortedEntries.length > 0 ? getMonthName(sortedEntries[0].date) : "LISTOPAD"}
+        </Text>
+        <Text style={[styles.journalHeaderYear, { color: textColor }]}>
+          {sortedEntries.length > 0 ? sortedEntries[0].date.getFullYear() : new Date().getFullYear()}
+        </Text>
+      </View>
+
+      {/* Entries List */}
+      <FlatList
+        data={sortedEntries}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <JournalEntryCard
+            entry={item}
+            onDelete={onDeleteEntry}
+            textColor={textColor}
+          />
+        )}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 16,
+          paddingBottom: Math.max(insets.bottom, 20) + 100,
+        }}
+        scrollEnabled={true}
+      />
+
+      {/* Footer Button */}
+      <View style={[styles.journalFooter, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <Pressable
+          style={({ pressed }) => [styles.exitButton, pressed && styles.exitButtonPressed]}
+          onPress={onBack}
+        >
+          <Text style={styles.exitButtonText}>Wyjście</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// Journal Entry Card Component
+function JournalEntryCard({
+  entry,
+  onDelete,
+  textColor,
+}: {
+  entry: JournalEntry;
+  onDelete: (id: string) => void;
+  textColor: string;
+}) {
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
+  const handleSwipeLeft = () => {
+    if (swipeOffset < -100) {
+      onDelete(entry.id);
+    }
+  };
+
+  return (
+    <Pressable
+      onLongPress={() => {
+        // Confirm delete
+        alert("Usunąć tę pozycję?");
+      // Simple delete on long press
+      onDelete(entry.id);
+      }}
+      style={styles.journalEntryCard}
+    >
+      <View style={styles.journalEntryContent}>
+        <View style={styles.journalEntryLeft}>
+          <Text style={[styles.journalEntryDate, { color: textColor }]}>
+            {entry.date.getDate()}
+          </Text>
+          <Text style={styles.journalEntryShift}>{entry.shift}</Text>
+        </View>
+        <View style={styles.journalEntryRight}>
+          <Text style={[styles.journalEntryAbsent, { color: "#666666" }]}>
+            {entry.absentEmployee}
+          </Text>
+          <Text style={[styles.journalEntrySubstitute, { color: textColor }]}>
+            {entry.substituteEmployee}
+            {entry.agency ? ` (${entry.agency})` : ""}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -542,6 +742,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
+  journalButton: {
+    backgroundColor: "#2196F3",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 56,
+    marginTop: 8,
+  },
+  journalButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  journalButtonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
+  },
   segmentedControl: {
     flexDirection: "row",
     gap: 8,
@@ -568,5 +786,89 @@ const styles = StyleSheet.create({
   },
   segmentButtonTextActive: {
     color: "#FFFFFF",
+  },
+  // Journal Screen Styles
+  journalContainer: {
+    flex: 1,
+  },
+  journalHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1E1E1E",
+  },
+  journalHeaderMonth: {
+    fontSize: 32,
+    fontWeight: "bold",
+  },
+  journalHeaderYear: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+  journalEntryCard: {
+    backgroundColor: "#1A2A3F",
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  journalEntryContent: {
+    flexDirection: "row",
+    padding: 16,
+    gap: 16,
+  },
+  journalEntryLeft: {
+    alignItems: "center",
+    minWidth: 60,
+  },
+  journalEntryDate: {
+    fontSize: 32,
+    fontWeight: "bold",
+  },
+  journalEntryShift: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#2196F3",
+    marginTop: 4,
+  },
+  journalEntryRight: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  journalEntryAbsent: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  journalEntrySubstitute: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  journalFooter: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: "#0B1929",
+    borderTopWidth: 1,
+    borderTopColor: "#1E1E1E",
+  },
+  exitButton: {
+    backgroundColor: "#2196F3",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 56,
+  },
+  exitButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  exitButtonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
   },
 });
