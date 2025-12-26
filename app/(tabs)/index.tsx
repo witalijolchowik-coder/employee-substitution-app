@@ -354,20 +354,11 @@ Pozdrawiam,`;
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
+        {/* Logo and Header Combined */}
+        <View style={styles.headerContainer}>
           <Image
-            source={require("@/assets/images/id-logistics-logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        {/* Header Title */}
-        <View style={styles.headerTitleContainer}>
-          <Image
-            source={require("@/assets/images/header-title.png")}
-            style={styles.headerTitle}
+            source={require("@/assets/images/header-logo-combined.png")}
+            style={styles.headerCombined}
             resizeMode="contain"
           />
           <Pressable onPress={handleRefresh} disabled={loading || refreshing} style={styles.refreshButton}>
@@ -646,14 +637,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  logoContainer: {
+  headerContainer: {
     alignItems: "center",
     paddingVertical: 20,
     marginBottom: 10,
+    position: "relative",
   },
-  logo: {
-    width: 200,
-    height: 80,
+  headerCombined: {
+    width: "100%",
+    height: 200,
   },
   scrollView: {
     flex: 1,
@@ -661,18 +653,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
   },
-  headerTitleContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-    position: "relative",
-  },
-  headerTitle: {
-    flex: 1,
-    height: 120,
-    width: "100%",
-  },
+
   refreshButton: {
     position: "absolute",
     right: 0,
