@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   View,
@@ -58,6 +58,19 @@ const FALLBACK_AGENCIES = [
   { name: "MS Group", email: "v.mutovchy@msgroup.hr" },
 ];
 
+// Design colors from mockup
+const COLORS = {
+  background: "#0B1929", // Dark blue background
+  surface: "#0B1929", // Same as background for seamless look
+  surfaceAlt: "#0B1929", // For input fields
+  border: "#1E3A52", // Thin border for inputs
+  text: "#FFFFFF", // White text
+  textSecondary: "#B3B3B3", // Gray text for labels
+  textMuted: "#666666", // Muted gray for absent employee
+  accent: "#2196F3", // Blue accent
+  accentRed: "#FF3B30", // Red for delete
+};
+
 interface Agency {
   name: string;
   email: string;
@@ -79,20 +92,15 @@ function AutocompleteDropdown({
   placeholder,
   data,
   onSelect,
-  surfaceColor,
-  textColor,
 }: {
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;
   data: string[];
   onSelect: (item: string) => void;
-  surfaceColor: string;
-  textColor: string;
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Filter data based on input
   const filteredData = data.filter((item) =>
     item.toLowerCase().includes(value.toLowerCase())
   );
@@ -106,7 +114,7 @@ function AutocompleteDropdown({
   return (
     <View style={styles.autocompleteContainer}>
       <TextInput
-        style={[styles.input, { color: textColor, backgroundColor: surfaceColor }]}
+        style={styles.input}
         value={value}
         onChangeText={(text) => {
           onChangeText(text);
@@ -118,7 +126,7 @@ function AutocompleteDropdown({
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
       />
       {showDropdown && filteredData.length > 0 && (
-        <View style={[styles.dropdownList, { backgroundColor: surfaceColor }]}>
+        <View style={styles.dropdownList}>
           <FlatList
             data={filteredData}
             keyExtractor={(item) => item}
@@ -128,7 +136,7 @@ function AutocompleteDropdown({
                 style={styles.dropdownItem}
                 onPress={() => handleSelectItem(item)}
               >
-                <Text style={{ color: textColor, fontSize: 16 }}>{item}</Text>
+                <Text style={styles.dropdownItemText}>{item}</Text>
               </Pressable>
             )}
           />
@@ -140,10 +148,6 @@ function AutocompleteDropdown({
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const backgroundColor = Colors.dark.background;
-  const textColor = Colors.dark.text;
-  const surfaceColor = "#1E1E1E";
-  const labelColor = "#B3B3B3";
 
   // Data state
   const [employees, setEmployees] = useState<string[]>(FALLBACK_EMPLOYEES);
@@ -332,15 +336,13 @@ Pozdrawiam,`;
         entries={journalEntries}
         onDeleteEntry={deleteJournalEntry}
         onBack={() => setCurrentPage("form")}
-        backgroundColor={backgroundColor}
-        textColor={textColor}
         insets={insets}
       />
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: backgroundColor }]}>
+    <View style={[styles.container, { backgroundColor: COLORS.background }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -370,9 +372,9 @@ Pozdrawiam,`;
           />
           <Pressable onPress={handleRefresh} disabled={loading || refreshing} style={styles.refreshButton}>
             {loading ? (
-              <ActivityIndicator size="small" color={textColor} />
+              <ActivityIndicator size="small" color={COLORS.text} />
             ) : (
-              <Ionicons name="refresh" size={24} color={textColor} />
+              <Ionicons name="refresh" size={24} color={COLORS.text} />
             )}
           </Pressable>
         </View>
@@ -388,8 +390,6 @@ Pozdrawiam,`;
               placeholder="Wybierz lub wpisz..."
               data={employees}
               onSelect={setAbsentEmployee}
-              surfaceColor={surfaceColor}
-              textColor={textColor}
             />
           </View>
 
@@ -428,8 +428,6 @@ Pozdrawiam,`;
               placeholder="Wybierz lub wpisz..."
               data={employees}
               onSelect={setSubstituteEmployee}
-              surfaceColor={surfaceColor}
-              textColor={textColor}
             />
           </View>
 
@@ -437,12 +435,12 @@ Pozdrawiam,`;
           {showAgencyField && (
             <View style={[styles.fieldContainer, styles.agencyFieldHighlight]}>
               <Text style={styles.label}>Agencja</Text>
-              <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
+              <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={selectedAgency}
                   onValueChange={setSelectedAgency}
-                  style={[styles.picker, { color: textColor }]}
-                  dropdownIconColor={textColor}
+                  style={styles.picker}
+                  dropdownIconColor={COLORS.text}
                 >
                   <Picker.Item label="Wybierz agencję..." value="" />
                   {agencies.map((agency) => (
@@ -457,11 +455,11 @@ Pozdrawiam,`;
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Data</Text>
             <Pressable
-              style={[styles.input, styles.dateInput, { backgroundColor: surfaceColor }]}
+              style={[styles.input, styles.dateInput]}
               onPress={() => setShowDatePicker(true)}
             >
-              <ThemedText style={{ color: textColor }}>{formatDate(date)}</ThemedText>
-              <Ionicons name="calendar-outline" size={20} color={textColor} />
+              <Text style={styles.dateText}>{formatDate(date)}</Text>
+              <Ionicons name="calendar-outline" size={20} color={COLORS.text} />
             </Pressable>
           </View>
 
@@ -484,7 +482,7 @@ Pozdrawiam,`;
             style={({ pressed }) => [styles.sendButton, pressed && styles.sendButtonPressed]}
             onPress={handleSendEmail}
           >
-            <ThemedText style={styles.sendButtonText}>Wyślij e-mail</ThemedText>
+            <Text style={styles.sendButtonText}>Wyślij e-mail</Text>
           </Pressable>
 
           {/* Journal Button */}
@@ -492,7 +490,7 @@ Pozdrawiam,`;
             style={({ pressed }) => [styles.journalButton, pressed && styles.journalButtonPressed]}
             onPress={() => setCurrentPage("journal")}
           >
-            <ThemedText style={styles.journalButtonText}>Dziennik</ThemedText>
+            <Text style={styles.journalButtonText}>Dziennik</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -505,15 +503,11 @@ function JournalScreen({
   entries,
   onDeleteEntry,
   onBack,
-  backgroundColor,
-  textColor,
   insets,
 }: {
   entries: JournalEntry[];
   onDeleteEntry: (id: string) => void;
   onBack: () => void;
-  backgroundColor: string;
-  textColor: string;
   insets: any;
 }) {
   const getMonthName = (date: Date): string => {
@@ -527,13 +521,13 @@ function JournalScreen({
   const sortedEntries = [...entries].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
-    <View style={[styles.journalContainer, { backgroundColor }]}>
+    <View style={[styles.journalContainer, { backgroundColor: COLORS.background }]}>
       {/* Header */}
       <View style={[styles.journalHeader, { paddingTop: Math.max(insets.top, 20) }]}>
-        <Text style={[styles.journalHeaderMonth, { color: textColor }]}>
+        <Text style={styles.journalHeaderMonth}>
           {sortedEntries.length > 0 ? getMonthName(sortedEntries[0].date) : "LISTOPAD"}
         </Text>
-        <Text style={[styles.journalHeaderYear, { color: textColor }]}>
+        <Text style={styles.journalHeaderYear}>
           {sortedEntries.length > 0 ? sortedEntries[0].date.getFullYear() : new Date().getFullYear()}
         </Text>
       </View>
@@ -546,7 +540,6 @@ function JournalScreen({
           <JournalEntryCard
             entry={item}
             onDelete={onDeleteEntry}
-            textColor={textColor}
           />
         )}
         contentContainerStyle={{
@@ -574,42 +567,50 @@ function JournalScreen({
 function JournalEntryCard({
   entry,
   onDelete,
-  textColor,
 }: {
   entry: JournalEntry;
   onDelete: (id: string) => void;
-  textColor: string;
 }) {
-  const [swipeX] = useState(new Animated.Value(0));
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderMove: (evt, gestureState) => {
-      if (gestureState.dx < 0) {
-        swipeX.setValue(Math.max(gestureState.dx, -100));
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dx < -50) {
-        Animated.timing(swipeX, {
-          toValue: -100,
-          duration: 200,
-          useNativeDriver: false,
-        }).start(() => {
-          onDelete(entry.id);
-        });
-      } else {
-        Animated.timing(swipeX, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: false,
-        }).start();
-      }
-    },
-  });
+  const swipeX = useRef(new Animated.Value(0)).current;
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (evt, gestureState) => Math.abs(gestureState.dx) > 10,
+      onPanResponderMove: (evt, gestureState) => {
+        if (gestureState.dx < 0) {
+          swipeX.setValue(Math.max(gestureState.dx, -100));
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx < -50) {
+          // Swipe left - delete
+          Animated.timing(swipeX, {
+            toValue: -100,
+            duration: 200,
+            useNativeDriver: false,
+          }).start(() => {
+            onDelete(entry.id);
+          });
+        } else {
+          // Reset
+          Animated.timing(swipeX, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: false,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   return (
     <View style={styles.journalEntryWrapper}>
+      {/* Delete background */}
+      <View style={styles.journalEntryDeleteBackground}>
+        <Ionicons name="trash" size={24} color="#FFFFFF" />
+      </View>
+
+      {/* Swipeable card */}
       <Animated.View
         style={[
           styles.journalEntryCard,
@@ -621,25 +622,22 @@ function JournalEntryCard({
       >
         <View style={styles.journalEntryContent}>
           <View style={styles.journalEntryLeft}>
-            <Text style={[styles.journalEntryDate, { color: textColor }]}>
+            <Text style={styles.journalEntryDate}>
               {entry.date.getDate()}
             </Text>
             <Text style={styles.journalEntryShift}>{entry.shift}</Text>
           </View>
           <View style={styles.journalEntryRight}>
-            <Text style={[styles.journalEntryAbsent, { color: "#666666" }]}>
+            <Text style={styles.journalEntryAbsent}>
               {entry.absentEmployee}
             </Text>
-            <Text style={[styles.journalEntrySubstitute, { color: textColor }]}>
+            <Text style={styles.journalEntrySubstitute}>
               {entry.substituteEmployee}
               {entry.agency ? ` (${entry.agency})` : ""}
             </Text>
           </View>
         </View>
       </Animated.View>
-      <View style={styles.journalEntryDeleteBackground}>
-        <Ionicons name="trash" size={24} color="#FF3B30" />
-      </View>
     </View>
   );
 }
@@ -689,7 +687,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: "#B3B3B3",
+    color: COLORS.textSecondary,
+    fontWeight: "500",
   },
   input: {
     borderRadius: 8,
@@ -697,7 +696,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 56,
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+    color: COLORS.text,
+  },
+  dateText: {
+    fontSize: 16,
+    color: COLORS.text,
   },
   autocompleteContainer: {
     position: "relative",
@@ -712,14 +717,19 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 0,
     maxHeight: 200,
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: COLORS.border,
     borderTopWidth: 0,
+    backgroundColor: COLORS.surfaceAlt,
   },
   dropdownItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#2C2C2C",
+    borderBottomColor: COLORS.border,
+  },
+  dropdownItemText: {
+    color: COLORS.text,
+    fontSize: 16,
   },
   dateInput: {
     flexDirection: "row",
@@ -732,21 +742,22 @@ const styles = StyleSheet.create({
     minHeight: 56,
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
   },
   picker: {
     height: 56,
-    color: "#FFFFFF",
+    color: COLORS.text,
   },
   agencyFieldHighlight: {
     borderWidth: 2,
-    borderColor: "#2196F3",
+    borderColor: COLORS.accent,
     borderRadius: 8,
     padding: 8,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: COLORS.surfaceAlt,
   },
   sendButton: {
-    backgroundColor: "#2196F3",
+    backgroundColor: COLORS.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
@@ -759,12 +770,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   sendButtonText: {
-    color: "#FFFFFF",
+    color: COLORS.text,
     fontSize: 18,
     fontWeight: "600",
   },
   journalButton: {
-    backgroundColor: "#2196F3",
+    backgroundColor: COLORS.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
@@ -777,7 +788,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   journalButtonText: {
-    color: "#FFFFFF",
+    color: COLORS.text,
     fontSize: 18,
     fontWeight: "600",
   },
@@ -790,23 +801,23 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 8,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: COLORS.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: COLORS.border,
   },
   segmentButtonActive: {
-    backgroundColor: "#2196F3",
-    borderColor: "#2196F3",
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
   },
   segmentButtonText: {
-    color: "#B3B3B3",
+    color: COLORS.textSecondary,
     fontSize: 16,
     fontWeight: "600",
   },
   segmentButtonTextActive: {
-    color: "#FFFFFF",
+    color: COLORS.text,
   },
   // Journal Screen Styles
   journalContainer: {
@@ -817,20 +828,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#1E1E1E",
+    borderBottomColor: COLORS.border,
   },
   journalHeaderMonth: {
     fontSize: 32,
     fontWeight: "bold",
+    color: COLORS.text,
   },
   journalHeaderYear: {
     fontSize: 14,
     marginTop: 4,
+    color: COLORS.text,
   },
   journalEntryWrapper: {
     marginBottom: 12,
     overflow: "hidden",
     borderRadius: 12,
+    backgroundColor: COLORS.background,
   },
   journalEntryCard: {
     backgroundColor: "#1A2A3F",
@@ -843,9 +857,10 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 100,
-    backgroundColor: "#FF3B30",
+    backgroundColor: COLORS.accentRed,
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: 12,
   },
   journalEntryContent: {
     flexDirection: "row",
@@ -859,11 +874,12 @@ const styles = StyleSheet.create({
   journalEntryDate: {
     fontSize: 32,
     fontWeight: "bold",
+    color: COLORS.text,
   },
   journalEntryShift: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#2196F3",
+    color: COLORS.accent,
     marginTop: 4,
   },
   journalEntryRight: {
@@ -873,10 +889,12 @@ const styles = StyleSheet.create({
   journalEntryAbsent: {
     fontSize: 14,
     marginBottom: 4,
+    color: COLORS.textMuted,
   },
   journalEntrySubstitute: {
     fontSize: 16,
     fontWeight: "500",
+    color: COLORS.text,
   },
   journalFooter: {
     position: "absolute",
@@ -885,12 +903,12 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: "#0B1929",
+    backgroundColor: COLORS.background,
     borderTopWidth: 1,
-    borderTopColor: "#1E1E1E",
+    borderTopColor: COLORS.border,
   },
   exitButton: {
-    backgroundColor: "#2196F3",
+    backgroundColor: COLORS.accent,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
@@ -902,7 +920,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   exitButtonText: {
-    color: "#FFFFFF",
+    color: COLORS.text,
     fontSize: 18,
     fontWeight: "600",
   },
