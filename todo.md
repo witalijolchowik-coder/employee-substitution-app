@@ -78,3 +78,11 @@
 - [x] Generate new icon with ID Logistics red arrow motif
 - [x] Update all icon files (icon.png, splash-icon.png, etc.)
 - [x] Update app.config.ts with new logo URL
+
+## Department Selection (Inbound/Outbound)
+- [x] Add Inbound/Outbound checkbox for absent employee
+- [x] Add Inbound/Outbound checkbox for substitute employee
+- [x] Update email template with [outbound-inbound] variables
+- [x] Implement dynamic recipient logic (add xdr1-in@id-logistics.com when Inbound)
+- [x] Fix data synchronization from GitHub Gist
+- [x] Add comprehensive logging for debugging

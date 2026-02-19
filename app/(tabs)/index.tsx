@@ -127,6 +127,37 @@ function AutocompleteDropdown({
   );
 }
 
+// Checkbox component
+function Checkbox({
+  checked,
+  onPress,
+  label,
+  textColor,
+  surfaceColor,
+}: {
+  checked: boolean;
+  onPress: () => void;
+  label: string;
+  textColor: string;
+  surfaceColor: string;
+}) {
+  return (
+    <Pressable
+      style={[
+        styles.checkboxContainer,
+        {
+          backgroundColor: surfaceColor,
+          borderColor: checked ? "#2196F3" : "#2C2C2C",
+        },
+      ]}
+      onPress={onPress}
+    >
+      {checked && <Ionicons name="checkmark" size={20} color="#2196F3" />}
+      <Text style={[styles.checkboxLabel, { color: textColor }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   // Force dark theme colors
@@ -143,8 +174,10 @@ export default function HomeScreen() {
 
   // Form state
   const [absentEmployee, setAbsentEmployee] = useState("");
+  const [absentIsInbound, setAbsentIsInbound] = useState(false);
   const [shift, setShift] = useState("D");
   const [substituteEmployee, setSubstituteEmployee] = useState("");
+  const [substituteIsInbound, setSubstituteIsInbound] = useState(false);
   const [selectedAgency, setSelectedAgency] = useState("");
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -169,36 +202,64 @@ export default function HomeScreen() {
 
   const loadCachedData = async () => {
     try {
+      console.log("[Cache] Loading cached data from AsyncStorage...");
       const cachedEmployees = await AsyncStorage.getItem("employee_list_cache");
       const cachedAgencies = await AsyncStorage.getItem("agency_list_cache");
 
       if (cachedEmployees) {
-        setEmployees(JSON.parse(cachedEmployees));
+        const parsed = JSON.parse(cachedEmployees);
+        console.log("[Cache] Loaded employees from cache:", parsed.length, "items");
+        setEmployees(parsed);
+      } else {
+        console.log("[Cache] No cached employees, using fallback");
+        setEmployees(FALLBACK_EMPLOYEES);
       }
+
       if (cachedAgencies) {
-        setAgencies(JSON.parse(cachedAgencies));
+        const parsed = JSON.parse(cachedAgencies);
+        console.log("[Cache] Loaded agencies from cache:", parsed.length, "items");
+        setAgencies(parsed);
+      } else {
+        console.log("[Cache] No cached agencies, using fallback");
+        setAgencies(FALLBACK_AGENCIES);
       }
     } catch (error) {
-      console.error("Error loading cached data:", error);
+      console.error("[Cache] Error loading cached data:", error);
+      setEmployees(FALLBACK_EMPLOYEES);
+      setAgencies(FALLBACK_AGENCIES);
     }
   };
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      console.log("[Fetch] Starting data sync from Gist...");
+
       // Fetch employees
       const employeesResponse = await fetch(EMPLOYEES_URL);
+      if (!employeesResponse.ok) {
+        throw new Error(`Employees fetch failed: ${employeesResponse.status}`);
+      }
       const employeesData = await employeesResponse.json();
+      console.log("[Fetch] Employees loaded from Gist:", employeesData.length, "items");
       setEmployees(employeesData);
       await AsyncStorage.setItem("employee_list_cache", JSON.stringify(employeesData));
+      console.log("[Fetch] Employees saved to cache");
 
       // Fetch agencies
       const agenciesResponse = await fetch(AGENCIES_URL);
+      if (!agenciesResponse.ok) {
+        throw new Error(`Agencies fetch failed: ${agenciesResponse.status}`);
+      }
       const agenciesData = await agenciesResponse.json();
+      console.log("[Fetch] Agencies loaded from Gist:", agenciesData.length, "items");
       setAgencies(agenciesData);
       await AsyncStorage.setItem("agency_list_cache", JSON.stringify(agenciesData));
+      console.log("[Fetch] Agencies saved to cache");
+
+      console.log("[Fetch] Data sync completed successfully");
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("[Fetch] Error fetching data:", error);
       // Keep fallback or cached data
     } finally {
       setLoading(false);
@@ -234,6 +295,10 @@ export default function HomeScreen() {
     const formattedDate = formatDate(date);
     const subject = `Informacje o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
 
+    // Determine departments
+    const absentDepartment = absentIsInbound ? "Inbound" : "Outbound";
+    const substituteDepartment = substituteIsInbound ? "Inbound" : "Outbound";
+
     // Build substitute name with agency if applicable
     let substituteName = substituteEmployee;
     let agencyEmail = "";
@@ -246,13 +311,12 @@ export default function HomeScreen() {
       }
     }
 
-    const body = `Dzień dobry
+    // Build email body according to new template
+    const body = `Dzień dobry,  
 
-Chciałbym poinformować, że ${absentEmployee} nie będzie obecny (-a) w pracy ${formattedDate} na zmianie ${shift}. Na jego (-ej) miejsce wejdzie ${substituteName}.
+W dniu ${formattedDate} proszę o udzielenie dnia wolnego dla ${absentEmployee}, dział ${absentDepartment} – powód: sprawy prywatne/złe samopoczucie. Na zastępstwo przyjdzie do pracy ${substituteName}, dział ${substituteDepartment}. 
 
-Proszę o uwzględnienie tej zmiany i wprowadzenie odpowiedniej korekty do harmonogramu.
-
-Pozdrawiam,`;
+Pozdrawiam, `;
 
     // Build recipient lists
     const toRecipients = [
@@ -260,6 +324,12 @@ Pozdrawiam,`;
       "xdr1-flowcontrol@id-logistics.com",
     ];
     const ccRecipients = ["mcal@id-logistics.com"];
+
+    // Add xdr1-in@id-logistics.com if either employee is Inbound
+    if (absentIsInbound || substituteIsInbound) {
+      toRecipients.push("xdr1-in@id-logistics.com");
+    }
+
     if (agencyEmail) {
       ccRecipients.push(agencyEmail);
     }
@@ -326,6 +396,13 @@ Pozdrawiam,`;
               surfaceColor={surfaceColor}
               textColor={textColor}
             />
+            <Checkbox
+              checked={absentIsInbound}
+              onPress={() => setAbsentIsInbound(!absentIsInbound)}
+              label="Inbound"
+              textColor={textColor}
+              surfaceColor={surfaceColor}
+            />
           </View>
 
           {/* Shift */}
@@ -365,6 +442,13 @@ Pozdrawiam,`;
               onSelect={setSubstituteEmployee}
               surfaceColor={surfaceColor}
               textColor={textColor}
+            />
+            <Checkbox
+              checked={substituteIsInbound}
+              onPress={() => setSubstituteIsInbound(!substituteIsInbound)}
+              label="Inbound"
+              textColor={textColor}
+              surfaceColor={surfaceColor}
             />
           </View>
 
@@ -523,6 +607,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     backgroundColor: "#1E1E1E",
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    flex: 1,
   },
   sendButton: {
     backgroundColor: "#2196F3",
