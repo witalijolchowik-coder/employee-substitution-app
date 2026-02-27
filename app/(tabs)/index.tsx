@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -87,9 +88,9 @@ function AutocompleteDropdown({
   );
 
   const handleSelectItem = (item: string) => {
-    onChangeText(item); // Update the input field
-    onSelect(item); // Notify parent
-    setShowDropdown(false); // Close dropdown
+    onChangeText(item);
+    onSelect(item);
+    setShowDropdown(false);
   };
 
   return (
@@ -127,44 +128,96 @@ function AutocompleteDropdown({
   );
 }
 
-// Checkbox component
-function Checkbox({
-  checked,
-  onPress,
-  label,
+// Department Toggle Component
+function DepartmentToggle({
+  value,
+  onValueChange,
   textColor,
   surfaceColor,
 }: {
-  checked: boolean;
-  onPress: () => void;
-  label: string;
+  value: "Outbound" | "Inbound";
+  onValueChange: (value: "Outbound" | "Inbound") => void;
   textColor: string;
   surfaceColor: string;
 }) {
   return (
-    <Pressable
-      style={[
-        styles.checkboxContainer,
-        {
-          backgroundColor: surfaceColor,
-          borderColor: checked ? "#2196F3" : "#2C2C2C",
-        },
-      ]}
-      onPress={onPress}
-    >
-      {checked && <Ionicons name="checkmark" size={20} color="#2196F3" />}
-      <Text style={[styles.checkboxLabel, { color: textColor }]}>{label}</Text>
-    </Pressable>
+    <View style={styles.toggleContainer}>
+      <Pressable
+        style={[
+          styles.toggleButton,
+          value === "Outbound" && styles.toggleButtonActive,
+          { backgroundColor: value === "Outbound" ? "#2196F3" : surfaceColor },
+        ]}
+        onPress={() => onValueChange("Outbound")}
+      >
+        <Text style={[styles.toggleText, { color: value === "Outbound" ? "#FFF" : textColor }]}>
+          Outbound
+        </Text>
+      </Pressable>
+      <Pressable
+        style={[
+          styles.toggleButton,
+          value === "Inbound" && styles.toggleButtonActive,
+          { backgroundColor: value === "Inbound" ? "#2196F3" : surfaceColor },
+        ]}
+        onPress={() => onValueChange("Inbound")}
+      >
+        <Text style={[styles.toggleText, { color: value === "Inbound" ? "#FFF" : textColor }]}>
+          Inbound
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+// Reason Selection Component
+function ReasonSelector({
+  value,
+  onValueChange,
+  textColor,
+  surfaceColor,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  textColor: string;
+  surfaceColor: string;
+}) {
+  const reasons = ["sprawy prywatne", "złe samopoczucie"];
+
+  return (
+    <View style={styles.reasonContainer}>
+      {reasons.map((reason) => (
+        <Pressable
+          key={reason}
+          style={[
+            styles.reasonButton,
+            value === reason && styles.reasonButtonActive,
+            {
+              backgroundColor: value === reason ? "#2196F3" : surfaceColor,
+              borderColor: value === reason ? "#2196F3" : "#2C2C2C",
+            },
+          ]}
+          onPress={() => onValueChange(reason)}
+        >
+          <Text style={[styles.reasonText, { color: value === reason ? "#FFF" : textColor }]}>
+            {reason}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  // Force dark theme colors
-  const backgroundColor = Colors.dark.background;
-  const textColor = Colors.dark.text;
-  const surfaceColor = "#1E1E1E";
-  const labelColor = "#B3B3B3";
+  const router = useRouter();
+  
+  // Force dark theme colors - unified deep dark blue
+  const backgroundColor = "#0B1929";
+  const textColor = "#E8E8E8";
+  const surfaceColor = "#1A2F47";
+  const labelColor = "#A0A0A0";
+  const accentColor = "#2196F3";
 
   // Data state
   const [employees, setEmployees] = useState<string[]>(FALLBACK_EMPLOYEES);
@@ -174,10 +227,11 @@ export default function HomeScreen() {
 
   // Form state
   const [absentEmployee, setAbsentEmployee] = useState("");
-  const [absentIsInbound, setAbsentIsInbound] = useState(false);
+  const [absentDepartment, setAbsentDepartment] = useState<"Outbound" | "Inbound">("Outbound");
+  const [absentReason, setAbsentReason] = useState("sprawy prywatne");
   const [shift, setShift] = useState("D");
   const [substituteEmployee, setSubstituteEmployee] = useState("");
-  const [substituteIsInbound, setSubstituteIsInbound] = useState(false);
+  const [substituteDepartment, setSubstituteDepartment] = useState<"Outbound" | "Inbound">("Outbound");
   const [selectedAgency, setSelectedAgency] = useState("");
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -295,10 +349,6 @@ export default function HomeScreen() {
     const formattedDate = formatDate(date);
     const subject = `Informacje o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
 
-    // Determine departments
-    const absentDepartment = absentIsInbound ? "Inbound" : "Outbound";
-    const substituteDepartment = substituteIsInbound ? "Inbound" : "Outbound";
-
     // Build substitute name with agency if applicable
     let substituteName = substituteEmployee;
     let agencyEmail = "";
@@ -311,10 +361,10 @@ export default function HomeScreen() {
       }
     }
 
-    // Build email body according to new template
+    // Build email body with selected reason
     const body = `Dzień dobry,  
 
-W dniu ${formattedDate} proszę o udzielenie dnia wolnego dla ${absentEmployee}, dział ${absentDepartment} – powód: sprawy prywatne/złe samopoczucie. Na zastępstwo przyjdzie do pracy ${substituteName}, dział ${substituteDepartment}. 
+W dniu ${formattedDate} proszę o udzielenie dnia wolnego dla ${absentEmployee}, dział ${absentDepartment} – powód: ${absentReason}. Na zastępstwo przyjdzie do pracy ${substituteName}, dział ${substituteDepartment}. 
 
 Pozdrawiam, `;
 
@@ -326,7 +376,7 @@ Pozdrawiam, `;
     const ccRecipients = ["mcal@id-logistics.com"];
 
     // Add xdr1-in@id-logistics.com if either employee is Inbound
-    if (absentIsInbound || substituteIsInbound) {
+    if (absentDepartment === "Inbound" || substituteDepartment === "Inbound") {
       toRecipients.push("xdr1-in@id-logistics.com");
     }
 
@@ -351,42 +401,45 @@ Pozdrawiam, `;
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: Math.max(insets.top, 20) + 10,
-            paddingBottom: Math.max(insets.bottom, 20) + 10,
+            paddingTop: Math.max(insets.top, 20),
+            paddingBottom: Math.max(insets.bottom, 20),
           },
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("@/assets/images/id-logistics-logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
+        {/* Header with Logo and Slogan - Unified Background */}
+        <View style={[styles.headerSection, { backgroundColor: backgroundColor }]}>
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("@/assets/images/id-logistics-logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
 
-        {/* Header Title */}
-        <View style={styles.headerTitleContainer}>
-          <Image
-            source={require("@/assets/images/header-title.png")}
-            style={styles.headerTitle}
-            resizeMode="contain"
-          />
-          <Pressable onPress={handleRefresh} disabled={loading || refreshing} style={styles.refreshButton}>
-            {loading ? (
-              <ActivityIndicator size="small" color={textColor} />
-            ) : (
-              <Ionicons name="refresh" size={24} color={textColor} />
-            )}
-          </Pressable>
+          {/* Header Title */}
+          <View style={styles.headerTitleContainer}>
+            <Image
+              source={require("@/assets/images/header-title.png")}
+              style={styles.headerTitle}
+              resizeMode="contain"
+            />
+            <Pressable onPress={handleRefresh} disabled={loading || refreshing} style={styles.refreshButton}>
+              {loading ? (
+                <ActivityIndicator size="small" color={textColor} />
+              ) : (
+                <Ionicons name="refresh" size={24} color={textColor} />
+              )}
+            </Pressable>
+          </View>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
           {/* Absent Employee */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Nieobecny pracownik</Text>
+            <Text style={[styles.label, { color: labelColor }]}>Nieobecny pracownik</Text>
             <AutocompleteDropdown
               value={absentEmployee}
               onChangeText={setAbsentEmployee}
@@ -396,10 +449,25 @@ Pozdrawiam, `;
               surfaceColor={surfaceColor}
               textColor={textColor}
             />
-            <Checkbox
-              checked={absentIsInbound}
-              onPress={() => setAbsentIsInbound(!absentIsInbound)}
-              label="Inbound"
+          </View>
+
+          {/* Absent Department */}
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: labelColor }]}>Dział</Text>
+            <DepartmentToggle
+              value={absentDepartment}
+              onValueChange={setAbsentDepartment}
+              textColor={textColor}
+              surfaceColor={surfaceColor}
+            />
+          </View>
+
+          {/* Reason Selection */}
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: labelColor }]}>Powód nieobecności</Text>
+            <ReasonSelector
+              value={absentReason}
+              onValueChange={setAbsentReason}
               textColor={textColor}
               surfaceColor={surfaceColor}
             />
@@ -407,7 +475,7 @@ Pozdrawiam, `;
 
           {/* Shift */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Zmiana</Text>
+            <Text style={[styles.label, { color: labelColor }]}>Zmiana</Text>
             <View style={styles.segmentedControl}>
               {["D", "M", "N"].map((shiftOption) => (
                 <Pressable
@@ -415,6 +483,10 @@ Pozdrawiam, `;
                   style={[
                     styles.segmentButton,
                     shift === shiftOption && styles.segmentButtonActive,
+                    {
+                      backgroundColor: shift === shiftOption ? accentColor : surfaceColor,
+                      borderColor: shift === shiftOption ? accentColor : "#2C2C2C",
+                    },
                   ]}
                   onPress={() => setShift(shiftOption)}
                 >
@@ -422,6 +494,7 @@ Pozdrawiam, `;
                     style={[
                       styles.segmentButtonText,
                       shift === shiftOption && styles.segmentButtonTextActive,
+                      { color: shift === shiftOption ? "#FFF" : labelColor },
                     ]}
                   >
                     {shiftOption}
@@ -433,7 +506,7 @@ Pozdrawiam, `;
 
           {/* Substitute Employee */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Zastępca</Text>
+            <Text style={[styles.label, { color: labelColor }]}>Zastępca</Text>
             <AutocompleteDropdown
               value={substituteEmployee}
               onChangeText={setSubstituteEmployee}
@@ -443,10 +516,14 @@ Pozdrawiam, `;
               surfaceColor={surfaceColor}
               textColor={textColor}
             />
-            <Checkbox
-              checked={substituteIsInbound}
-              onPress={() => setSubstituteIsInbound(!substituteIsInbound)}
-              label="Inbound"
+          </View>
+
+          {/* Substitute Department */}
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: labelColor }]}>Dział zastępcy</Text>
+            <DepartmentToggle
+              value={substituteDepartment}
+              onValueChange={setSubstituteDepartment}
               textColor={textColor}
               surfaceColor={surfaceColor}
             />
@@ -455,7 +532,7 @@ Pozdrawiam, `;
           {/* Agency (conditional) */}
           {showAgencyField && (
             <View style={[styles.fieldContainer, styles.agencyFieldHighlight]}>
-              <Text style={styles.label}>Agencja</Text>
+              <Text style={[styles.label, { color: labelColor }]}>Agencja</Text>
               <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
                 <Picker
                   selectedValue={selectedAgency}
@@ -474,12 +551,12 @@ Pozdrawiam, `;
 
           {/* Date */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Data</Text>
+            <Text style={[styles.label, { color: labelColor }]}>Data</Text>
             <Pressable
               style={[styles.input, styles.dateInput, { backgroundColor: surfaceColor }]}
               onPress={() => setShowDatePicker(true)}
             >
-              <ThemedText style={{ color: textColor }}>{formatDate(date)}</ThemedText>
+              <Text style={{ color: textColor, fontSize: 16 }}>{formatDate(date)}</Text>
               <Ionicons name="calendar-outline" size={20} color={textColor} />
             </Pressable>
           </View>
@@ -500,10 +577,28 @@ Pozdrawiam, `;
 
           {/* Send Button */}
           <Pressable
-            style={({ pressed }) => [styles.sendButton, pressed && styles.sendButtonPressed]}
+            style={({ pressed }) => [
+              styles.sendButton,
+              pressed && styles.sendButtonPressed,
+              { backgroundColor: accentColor },
+            ]}
             onPress={handleSendEmail}
           >
-            <ThemedText style={styles.sendButtonText}>Wyślij e-mail</ThemedText>
+            <Ionicons name="mail-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={styles.sendButtonText}>Wyślij e-mail</Text>
+          </Pressable>
+
+          {/* Journal Button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.journalButton,
+              pressed && styles.journalButtonPressed,
+              { backgroundColor: surfaceColor, borderColor: accentColor },
+            ]}
+            onPress={() => router.push("/journal")}
+          >
+            <Ionicons name="list-outline" size={20} color={accentColor} style={{ marginRight: 8 }} />
+            <Text style={[styles.journalButtonText, { color: accentColor }]}>Historia zamian</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -515,31 +610,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  logoContainer: {
-    alignItems: "center",
-    paddingVertical: 20,
-    marginBottom: 10,
-  },
-  logo: {
-    width: 200,
-    height: 80,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,
   },
+  headerSection: {
+    paddingVertical: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+  },
+  logoContainer: {
+    alignItems: "center",
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  logo: {
+    width: 180,
+    height: 70,
+  },
   headerTitleContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
     position: "relative",
   },
   headerTitle: {
     flex: 1,
-    height: 120,
+    height: 100,
     width: "100%",
   },
   refreshButton: {
@@ -547,32 +646,37 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     padding: 8,
+    zIndex: 10,
   },
   form: {
-    gap: 16,
+    gap: 14,
+    marginBottom: 20,
   },
   fieldContainer: {
     gap: 8,
   },
   label: {
-    fontSize: 14,
-    color: "#B3B3B3",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   input: {
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 10,
+    padding: 14,
     fontSize: 16,
-    minHeight: 56,
+    minHeight: 50,
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
   },
   autocompleteContainer: {
     position: "relative",
     zIndex: 1,
   },
   dropdownList: {
-    borderRadius: 8,
+    borderRadius: 10,
     marginTop: -4,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     maxHeight: 200,
@@ -582,9 +686,51 @@ const styles = StyleSheet.create({
   },
   dropdownItem: {
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#2C2C2C",
+  },
+  toggleContainer: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
+  },
+  toggleButtonActive: {
+    borderColor: "#2196F3",
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  reasonContainer: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  reasonButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  reasonButtonActive: {
+    borderColor: "#2196F3",
+  },
+  reasonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
   },
   dateInput: {
     flexDirection: "row",
@@ -592,76 +738,78 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pickerContainer: {
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: "hidden",
-    minHeight: 56,
+    minHeight: 50,
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
   },
   picker: {
-    height: 56,
+    height: 50,
     color: "#FFFFFF",
   },
   agencyFieldHighlight: {
     borderWidth: 2,
     borderColor: "#2196F3",
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 8,
-    backgroundColor: "#1E1E1E",
-  },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 12,
-  },
-  checkboxLabel: {
-    fontSize: 16,
-    flex: 1,
   },
   sendButton: {
-    backgroundColor: "#2196F3",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 56,
-    marginTop: 8,
+    minHeight: 54,
+    marginTop: 12,
+    flexDirection: "row",
   },
   sendButtonPressed: {
-    opacity: 0.8,
+    opacity: 0.85,
     transform: [{ scale: 0.98 }],
   },
   sendButtonText: {
     color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  journalButton: {
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 54,
+    flexDirection: "row",
+    borderWidth: 2,
+  },
+  journalButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+  journalButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
   },
   segmentedControl: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: "#1E1E1E",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#2C2C2C",
   },
   segmentButtonActive: {
-    backgroundColor: "#2196F3",
     borderColor: "#2196F3",
   },
   segmentButtonText: {
-    color: "#B3B3B3",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "700",
   },
   segmentButtonTextActive: {
     color: "#FFFFFF",
