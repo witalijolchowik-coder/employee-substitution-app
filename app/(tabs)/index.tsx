@@ -257,15 +257,16 @@ export default function HomeScreen() {
   const loadCachedData = async () => {
     try {
       console.log("[Cache] Loading cached data from AsyncStorage...");
-      const cachedEmployees = await AsyncStorage.getItem("employee_list_cache");
+      const employeesList = await AsyncStorage.getItem("employees_list");
       const cachedAgencies = await AsyncStorage.getItem("agency_list_cache");
 
-      if (cachedEmployees) {
-        const parsed = JSON.parse(cachedEmployees);
-        console.log("[Cache] Loaded employees from cache:", parsed.length, "items");
-        setEmployees(parsed);
+      if (employeesList) {
+        const parsed = JSON.parse(employeesList);
+        const names = parsed.map((emp: any) => emp.name);
+        console.log("[Cache] Loaded employees from employees_list:", names.length, "items");
+        setEmployees(names);
       } else {
-        console.log("[Cache] No cached employees, using fallback");
+        console.log("[Cache] No employees_list, using fallback");
         setEmployees(FALLBACK_EMPLOYEES);
       }
 
@@ -333,7 +334,7 @@ export default function HomeScreen() {
     return `${day}.${month}.${year}`;
   };
 
-  const handleSendEmail = () => {
+  const handleSendEmail = async () => {
     // Validate required fields
     if (!absentEmployee || !shift || !substituteEmployee) {
       alert("Proszę wypełnić wszystkie pola");
@@ -386,6 +387,58 @@ Pozdrawiam, `;
 
     // Create mailto URL
     const mailtoUrl = `mailto:${toRecipients.join(",")}?cc=${ccRecipients.join(",")}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    // Save external agency employee if applicable
+    if (showAgencyField && selectedAgency && substituteEmployee) {
+      try {
+        const externalEmployees = await AsyncStorage.getItem("external_employees") || "[]";
+        const parsed = JSON.parse(externalEmployees);
+        
+        // Check if employee already exists
+        const exists = parsed.some((emp: any) => 
+          emp.name === substituteEmployee && emp.agency === selectedAgency
+        );
+        
+        if (!exists) {
+          parsed.push({
+            id: `ext_${Date.now()}`,
+            name: substituteEmployee,
+            department: substituteDepartment,
+            agency: selectedAgency,
+            isExternal: true,
+          });
+          await AsyncStorage.setItem("external_employees", JSON.stringify(parsed));
+          console.log("[External] Saved external employee:", substituteEmployee, "from", selectedAgency);
+        }
+      } catch (error) {
+        console.error("[External] Error saving external employee:", error);
+      }
+    }
+
+    // Save journal entry
+    try {
+      const journalEntries = await AsyncStorage.getItem("journal_entries") || "[]";
+      const parsed = JSON.parse(journalEntries);
+      
+      const entry = {
+        id: `entry_${Date.now()}`,
+        date: formattedDate,
+        absentEmployee,
+        absentDepartment,
+        shift,
+        substituteEmployee,
+        substituteDepartment,
+        reason: absentReason,
+        agency: selectedAgency || undefined,
+        timestamp: Date.now(),
+      };
+      
+      parsed.push(entry);
+      await AsyncStorage.setItem("journal_entries", JSON.stringify(parsed));
+      console.log("[Journal] Saved entry:", entry);
+    } catch (error) {
+      console.error("[Journal] Error saving entry:", error);
+    }
 
     // Open email client
     Linking.openURL(mailtoUrl).catch((err) => {
@@ -646,7 +699,6 @@ const styles = StyleSheet.create({
   section: {
     borderRadius: 12,
     padding: 16,
-    borderLeftWidth: 4,
     gap: 12,
   },
   sectionTitle: {

@@ -11,7 +11,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -32,7 +31,6 @@ interface JournalEntry {
 
 export default function JournalScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
 
   // Unified deep dark blue theme
   const backgroundColor = "#0B1929";
@@ -46,6 +44,8 @@ export default function JournalScreen() {
 
   useEffect(() => {
     loadEntries();
+    const unsubscribe = setInterval(loadEntries, 1000); // Refresh every second
+    return () => clearInterval(unsubscribe);
   }, []);
 
   const loadEntries = async () => {
@@ -108,44 +108,59 @@ export default function JournalScreen() {
   };
 
   const renderEntry = ({ item }: { item: JournalEntry }) => (
-    <View style={[styles.entryCard, { backgroundColor: surfaceColor }]}>
+    <View style={[styles.entryCard, { backgroundColor: surfaceColor, borderColor: accentColor }]}>
+      {/* Header with date and shift */}
       <View style={styles.entryHeader}>
-        <View style={styles.entryDateSection}>
+        <View style={styles.headerLeft}>
           <Text style={[styles.entryDate, { color: accentColor }]}>{item.date}</Text>
-          <Text style={[styles.entryTime, { color: labelColor }]}>{formatTime(item.timestamp)}</Text>
+          <Text style={[styles.entryTime, { color: labelColor }]}>
+            <Ionicons name="time-outline" size={12} color={labelColor} /> {formatTime(item.timestamp)}
+          </Text>
         </View>
-        <View style={styles.entryShift}>
-          <Text style={[styles.shiftBadge, { backgroundColor: accentColor }]}>{item.shift}</Text>
+        <View style={[styles.shiftBadge, { backgroundColor: accentColor }]}>
+          <Text style={styles.shiftText}>{item.shift}</Text>
         </View>
       </View>
 
-      <View style={styles.entryBody}>
-        <View style={styles.entryRow}>
-          <Text style={[styles.entryLabel, { color: labelColor }]}>Nieobecny:</Text>
-          <Text style={[styles.entryValue, { color: textColor }]}>
-            {item.absentEmployee} ({item.absentDepartment})
-          </Text>
+      {/* Main content */}
+      <View style={styles.entryContent}>
+        {/* Absent employee */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: labelColor }]}>Nieobecny pracownik</Text>
+          <Text style={[styles.employeeName, { color: textColor }]}>{item.absentEmployee}</Text>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: labelColor }]}>Dział:</Text>
+            <Text style={[styles.detailValue, { color: accentColor }]}>{item.absentDepartment}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: labelColor }]}>Powód:</Text>
+            <Text style={[styles.detailValue, { color: textColor }]}>{item.reason}</Text>
+          </View>
         </View>
 
-        <View style={styles.entryRow}>
-          <Text style={[styles.entryLabel, { color: labelColor }]}>Powód:</Text>
-          <Text style={[styles.entryValue, { color: textColor }]}>{item.reason}</Text>
-        </View>
-
-        <View style={styles.entryRow}>
-          <Text style={[styles.entryLabel, { color: labelColor }]}>Zastępca:</Text>
-          <Text style={[styles.entryValue, { color: textColor }]}>
-            {item.substituteEmployee} ({item.substituteDepartment})
-            {item.agency && ` - ${item.agency}`}
-          </Text>
+        {/* Substitute employee */}
+        <View style={[styles.section, { borderTopWidth: 1, borderTopColor: labelColor + "30", paddingTop: 12, marginTop: 12 }]}>
+          <Text style={[styles.sectionLabel, { color: labelColor }]}>Zastępca</Text>
+          <Text style={[styles.employeeName, { color: textColor }]}>{item.substituteEmployee}</Text>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: labelColor }]}>Dział:</Text>
+            <Text style={[styles.detailValue, { color: accentColor }]}>{item.substituteDepartment}</Text>
+          </View>
+          {item.agency && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: labelColor }]}>Agencja:</Text>
+              <Text style={[styles.detailValue, { color: textColor }]}>{item.agency}</Text>
+            </View>
+          )}
         </View>
       </View>
 
+      {/* Delete button */}
       <Pressable
-        style={styles.deleteButton}
+        style={({ pressed }) => [styles.deleteButton, pressed && styles.deleteButtonPressed]}
         onPress={() => deleteEntry(item.id)}
       >
-        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
       </Pressable>
     </View>
   );
@@ -163,17 +178,18 @@ export default function JournalScreen() {
         ]}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color={accentColor} />
-          </Pressable>
-          <Text style={[styles.headerTitle, { color: textColor }]}>История замин</Text>
-          <View style={{ width: 28 }} />
+        <View style={styles.headerSection}>
+          <Text style={[styles.headerTitle, { color: textColor }]}>Historia zamian</Text>
+          <Text style={[styles.headerSubtitle, { color: labelColor }]}>
+            {entries.length} {entries.length === 1 ? "wpis" : entries.length < 5 ? "wpisy" : "wpisów"}
+          </Text>
         </View>
 
         {/* Content */}
         {loading ? (
-          <Text style={[styles.emptyText, { color: labelColor }]}>Ładowanie...</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: labelColor }]}>Ładowanie...</Text>
+          </View>
         ) : entries.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="document-text-outline" size={64} color={labelColor} />
@@ -206,95 +222,102 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  headerSection: {
     marginBottom: 20,
-    paddingVertical: 12,
-  },
-  backButton: {
-    padding: 4,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: "700",
-    flex: 1,
-    textAlign: "center",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
   },
   entryCard: {
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: "#2C2C2C",
+    padding: 16,
+    borderLeftWidth: 4,
+    position: "relative",
   },
   entryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2C2C2C",
+    alignItems: "flex-start",
+    marginBottom: 16,
   },
-  entryDateSection: {
+  headerLeft: {
     flex: 1,
   },
   entryDate: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
   },
   entryTime: {
     fontSize: 12,
-    marginTop: 2,
-  },
-  entryShift: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
   },
   shiftBadge: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  shiftText: {
     color: "#FFF",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
   },
-  entryBody: {
-    gap: 8,
+  entryContent: {
     marginBottom: 12,
   },
-  entryRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+  section: {
     gap: 8,
   },
-  entryLabel: {
+  sectionLabel: {
     fontSize: 12,
     fontWeight: "600",
-    minWidth: 70,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  entryValue: {
-    fontSize: 13,
-    flex: 1,
+  employeeName: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  detailLabel: {
+    fontSize: 12,
+  },
+  detailValue: {
+    fontSize: 12,
     fontWeight: "500",
   },
   deleteButton: {
-    alignSelf: "flex-end",
+    position: "absolute",
+    top: 16,
+    right: 16,
     padding: 8,
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 59, 48, 0.1)",
+  },
+  deleteButtonPressed: {
+    backgroundColor: "rgba(255, 59, 48, 0.2)",
   },
   emptyContainer: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 60,
+    gap: 12,
   },
   emptyText: {
     fontSize: 16,
     fontWeight: "600",
-    marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    marginTop: 8,
   },
 });
