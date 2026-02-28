@@ -11,8 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { useRouter } from "expo-router";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -33,6 +32,7 @@ interface JournalEntry {
 
 export default function JournalScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   // Unified deep dark blue theme
   const backgroundColor = "#0B1929";
@@ -40,17 +40,13 @@ export default function JournalScreen() {
   const surfaceColor = "#1A2F47";
   const labelColor = "#A0A0A0";
   const accentColor = "#2196F3";
-  const dangerColor = "#FF3B30";
 
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Reload entries when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      loadEntries();
-    }, [])
-  );
+  useEffect(() => {
+    loadEntries();
+  }, []);
 
   const loadEntries = async () => {
     try {
@@ -112,63 +108,45 @@ export default function JournalScreen() {
   };
 
   const renderEntry = ({ item }: { item: JournalEntry }) => (
-    <View style={[styles.entryCard, { backgroundColor: surfaceColor, borderColor: accentColor }]}>
-      {/* Top Row: Date, Time, Shift */}
+    <View style={[styles.entryCard, { backgroundColor: surfaceColor }]}>
       <View style={styles.entryHeader}>
-        <View style={styles.dateTimeSection}>
+        <View style={styles.entryDateSection}>
           <Text style={[styles.entryDate, { color: accentColor }]}>{item.date}</Text>
           <Text style={[styles.entryTime, { color: labelColor }]}>{formatTime(item.timestamp)}</Text>
         </View>
-        <View style={[styles.shiftBadge, { backgroundColor: accentColor }]}>
-          <Text style={styles.shiftText}>{item.shift}</Text>
-        </View>
-        <Pressable
-          style={styles.deleteButton}
-          onPress={() => deleteEntry(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color={dangerColor} />
-        </Pressable>
-      </View>
-
-      {/* Divider */}
-      <View style={[styles.divider, { backgroundColor: "#2C2C2C" }]} />
-
-      {/* Absent Employee Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: labelColor }]}>Nieobecny</Text>
-        <Text style={[styles.employeeName, { color: textColor }]}>{item.absentEmployee}</Text>
-        <View style={styles.detailsRow}>
-          <View style={styles.detail}>
-            <Text style={[styles.detailLabel, { color: labelColor }]}>Dział:</Text>
-            <Text style={[styles.detailValue, { color: accentColor }]}>{item.absentDepartment}</Text>
-          </View>
-          <View style={styles.detail}>
-            <Text style={[styles.detailLabel, { color: labelColor }]}>Powód:</Text>
-            <Text style={[styles.detailValue, { color: textColor }]}>{item.reason}</Text>
-          </View>
+        <View style={styles.entryShift}>
+          <Text style={[styles.shiftBadge, { backgroundColor: accentColor }]}>{item.shift}</Text>
         </View>
       </View>
 
-      {/* Divider */}
-      <View style={[styles.divider, { backgroundColor: "#2C2C2C" }]} />
+      <View style={styles.entryBody}>
+        <View style={styles.entryRow}>
+          <Text style={[styles.entryLabel, { color: labelColor }]}>Nieobecny:</Text>
+          <Text style={[styles.entryValue, { color: textColor }]}>
+            {item.absentEmployee} ({item.absentDepartment})
+          </Text>
+        </View>
 
-      {/* Substitute Employee Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: labelColor }]}>Zastępca</Text>
-        <Text style={[styles.employeeName, { color: textColor }]}>{item.substituteEmployee}</Text>
-        <View style={styles.detailsRow}>
-          <View style={styles.detail}>
-            <Text style={[styles.detailLabel, { color: labelColor }]}>Dział:</Text>
-            <Text style={[styles.detailValue, { color: accentColor }]}>{item.substituteDepartment}</Text>
-          </View>
-          {item.agency && (
-            <View style={styles.detail}>
-              <Text style={[styles.detailLabel, { color: labelColor }]}>Agencja:</Text>
-              <Text style={[styles.detailValue, { color: textColor }]}>{item.agency}</Text>
-            </View>
-          )}
+        <View style={styles.entryRow}>
+          <Text style={[styles.entryLabel, { color: labelColor }]}>Powód:</Text>
+          <Text style={[styles.entryValue, { color: textColor }]}>{item.reason}</Text>
+        </View>
+
+        <View style={styles.entryRow}>
+          <Text style={[styles.entryLabel, { color: labelColor }]}>Zastępca:</Text>
+          <Text style={[styles.entryValue, { color: textColor }]}>
+            {item.substituteEmployee} ({item.substituteDepartment})
+            {item.agency && ` - ${item.agency}`}
+          </Text>
         </View>
       </View>
+
+      <Pressable
+        style={styles.deleteButton}
+        onPress={() => deleteEntry(item.id)}
+      >
+        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+      </Pressable>
     </View>
   );
 
@@ -180,26 +158,22 @@ export default function JournalScreen() {
           styles.scrollContent,
           {
             paddingTop: Math.max(insets.top, 20),
-            paddingBottom: Math.max(insets.bottom, 80),
+            paddingBottom: Math.max(insets.bottom, 20),
           },
         ]}
       >
         {/* Header */}
         <View style={styles.header}>
-          <Ionicons name="document-text-outline" size={28} color={accentColor} />
-          <Text style={[styles.headerTitle, { color: textColor }]}>Historia zamian</Text>
-          {entries.length > 0 && (
-            <View style={[styles.badge, { backgroundColor: accentColor }]}>
-              <Text style={styles.badgeText}>{entries.length}</Text>
-            </View>
-          )}
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={28} color={accentColor} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: textColor }]}>История замин</Text>
+          <View style={{ width: 28 }} />
         </View>
 
         {/* Content */}
         {loading ? (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: labelColor }]}>Ładowanie...</Text>
-          </View>
+          <Text style={[styles.emptyText, { color: labelColor }]}>Ładowanie...</Text>
         ) : entries.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="document-text-outline" size={64} color={labelColor} />
@@ -235,100 +209,78 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
     marginBottom: 20,
     paddingVertical: 12,
   },
+  backButton: {
+    padding: 4,
+  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "700",
     flex: 1,
-  },
-  badge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    minWidth: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeText: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "700",
+    textAlign: "center",
   },
   entryCard: {
     borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
+    padding: 14,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
   },
   entryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2C2C2C",
   },
-  dateTimeSection: {
+  entryDateSection: {
     flex: 1,
   },
   entryDate: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
   entryTime: {
     fontSize: 12,
     marginTop: 2,
   },
-  shiftBadge: {
-    borderRadius: 8,
+  entryShift: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    marginHorizontal: 8,
-    minWidth: 44,
-    alignItems: "center",
+    borderRadius: 8,
   },
-  shiftText: {
+  shiftBadge: {
     color: "#FFF",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
   },
-  deleteButton: {
-    padding: 8,
+  entryBody: {
+    gap: 8,
+    marginBottom: 12,
   },
-  divider: {
-    height: 1,
-    marginVertical: 12,
+  entryRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
   },
-  section: {
-    marginBottom: 4,
-  },
-  sectionLabel: {
+  entryLabel: {
     fontSize: 12,
     fontWeight: "600",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    minWidth: 70,
   },
-  employeeName: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  detailsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  detail: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  detailValue: {
+  entryValue: {
     fontSize: 13,
+    flex: 1,
     fontWeight: "500",
+  },
+  deleteButton: {
+    alignSelf: "flex-end",
+    padding: 8,
   },
   emptyContainer: {
     flex: 1,
