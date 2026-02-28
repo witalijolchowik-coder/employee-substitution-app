@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   FlatList,
+  Alert,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -60,6 +61,19 @@ const FALLBACK_AGENCIES = [
 interface Agency {
   name: string;
   email: string;
+}
+
+interface JournalEntry {
+  id: string;
+  date: string;
+  absentEmployee: string;
+  absentDepartment: string;
+  shift: string;
+  substituteEmployee: string;
+  substituteDepartment: string;
+  reason: string;
+  agency?: string;
+  timestamp: number;
 }
 
 // Autocomplete dropdown component
@@ -150,7 +164,13 @@ function DepartmentToggle({
         ]}
         onPress={() => onValueChange("Outbound")}
       >
-        <Text style={[styles.toggleText, { color: value === "Outbound" ? "#FFF" : textColor }]}>
+        <Text
+          style={[
+            styles.toggleButtonText,
+            value === "Outbound" && styles.toggleButtonTextActive,
+            { color: value === "Outbound" ? "#FFF" : textColor },
+          ]}
+        >
           Outbound
         </Text>
       </Pressable>
@@ -162,7 +182,13 @@ function DepartmentToggle({
         ]}
         onPress={() => onValueChange("Inbound")}
       >
-        <Text style={[styles.toggleText, { color: value === "Inbound" ? "#FFF" : textColor }]}>
+        <Text
+          style={[
+            styles.toggleButtonText,
+            value === "Inbound" && styles.toggleButtonTextActive,
+            { color: value === "Inbound" ? "#FFF" : textColor },
+          ]}
+        >
           Inbound
         </Text>
       </Pressable>
@@ -170,7 +196,7 @@ function DepartmentToggle({
   );
 }
 
-// Reason Selection Component
+// Reason Selector Component
 function ReasonSelector({
   value,
   onValueChange,
@@ -194,7 +220,6 @@ function ReasonSelector({
             value === reason && styles.reasonButtonActive,
             {
               backgroundColor: value === reason ? "#2196F3" : surfaceColor,
-              borderColor: value === reason ? "#2196F3" : "#2C2C2C",
             },
           ]}
           onPress={() => onValueChange(reason)}
@@ -235,6 +260,7 @@ export default function HomeScreen() {
   const [selectedAgency, setSelectedAgency] = useState("");
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [sending, setSending] = useState(false);
 
   // UI state
   const [showAgencyField, setShowAgencyField] = useState(false);
@@ -333,65 +359,112 @@ export default function HomeScreen() {
     return `${day}.${month}.${year}`;
   };
 
-  const handleSendEmail = () => {
+  const saveToJournal = async () => {
+    try {
+      const entry: JournalEntry = {
+        id: Date.now().toString(),
+        date: formatDate(date),
+        absentEmployee,
+        absentDepartment,
+        shift,
+        substituteEmployee,
+        substituteDepartment,
+        reason: absentReason,
+        agency: selectedAgency || undefined,
+        timestamp: Date.now(),
+      };
+
+      const stored = await AsyncStorage.getItem("journal_entries");
+      const entries: JournalEntry[] = stored ? JSON.parse(stored) : [];
+      entries.push(entry);
+      await AsyncStorage.setItem("journal_entries", JSON.stringify(entries));
+      console.log("[Journal] Entry saved successfully");
+    } catch (error) {
+      console.error("[Journal] Error saving entry:", error);
+    }
+  };
+
+  const handleSendEmail = async () => {
     // Validate required fields
     if (!absentEmployee || !shift || !substituteEmployee) {
-      alert("Proszę wypełnić wszystkie pola");
+      Alert.alert("Błąd", "Proszę wypełnić wszystkie pola");
       return;
     }
 
     if (showAgencyField && !selectedAgency) {
-      alert("Proszę wybrać agencję");
+      Alert.alert("Błąd", "Proszę wybrać agencję");
       return;
     }
 
-    // Build email
-    const formattedDate = formatDate(date);
-    const subject = `Informacje o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
+    setSending(true);
 
-    // Build substitute name with agency if applicable
-    let substituteName = substituteEmployee;
-    let agencyEmail = "";
+    try {
+      // Build email
+      const formattedDate = formatDate(date);
+      const subject = `Informacje o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
 
-    if (showAgencyField && selectedAgency) {
-      const agency = agencies.find((a) => a.name === selectedAgency);
-      if (agency) {
-        substituteName = `${substituteEmployee} (${agency.name})`;
-        agencyEmail = agency.email;
+      // Build substitute name with agency if applicable
+      let substituteName = substituteEmployee;
+      let agencyEmail = "";
+
+      if (showAgencyField && selectedAgency) {
+        const agency = agencies.find((a) => a.name === selectedAgency);
+        if (agency) {
+          substituteName = `${substituteEmployee} (${agency.name})`;
+          agencyEmail = agency.email;
+        }
       }
-    }
 
-    // Build email body with selected reason
-    const body = `Dzień dobry,  
+      // Build email body with selected reason
+      const body = `Dzień dobry,  
 
 W dniu ${formattedDate} proszę o udzielenie dnia wolnego dla ${absentEmployee}, dział ${absentDepartment} – powód: ${absentReason}. Na zastępstwo przyjdzie do pracy ${substituteName}, dział ${substituteDepartment}. 
 
 Pozdrawiam, `;
 
-    // Build recipient lists
-    const toRecipients = [
-      "xdr1-lead-out@id-logistics.com",
-      "xdr1-flowcontrol@id-logistics.com",
-    ];
-    const ccRecipients = ["mcal@id-logistics.com"];
+      // Build recipient lists
+      const toRecipients = [
+        "xdr1-lead-out@id-logistics.com",
+        "xdr1-flowcontrol@id-logistics.com",
+      ];
+      const ccRecipients = ["mcal@id-logistics.com"];
 
-    // Add xdr1-in@id-logistics.com if either employee is Inbound
-    if (absentDepartment === "Inbound" || substituteDepartment === "Inbound") {
-      toRecipients.push("xdr1-in@id-logistics.com");
+      // Add xdr1-in@id-logistics.com if either employee is Inbound
+      if (absentDepartment === "Inbound" || substituteDepartment === "Inbound") {
+        toRecipients.push("xdr1-in@id-logistics.com");
+      }
+
+      if (agencyEmail) {
+        ccRecipients.push(agencyEmail);
+      }
+
+      // Save to journal before sending
+      await saveToJournal();
+
+      // Create mailto URL
+      const mailtoUrl = `mailto:${toRecipients.join(",")}?cc=${ccRecipients.join(",")}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      // Open email client
+      await Linking.openURL(mailtoUrl);
+
+      // Show success message
+      Alert.alert("Sukces", "Wiadomość e-mail została przesłana i zapisana w historii");
+
+      // Reset form
+      setAbsentEmployee("");
+      setAbsentDepartment("Outbound");
+      setAbsentReason("sprawy prywatne");
+      setShift("D");
+      setSubstituteEmployee("");
+      setSubstituteDepartment("Outbound");
+      setSelectedAgency("");
+      setDate(new Date());
+    } catch (error) {
+      console.error("Error sending email:", error);
+      Alert.alert("Błąd", "Nie można otworzyć klienta poczty");
+    } finally {
+      setSending(false);
     }
-
-    if (agencyEmail) {
-      ccRecipients.push(agencyEmail);
-    }
-
-    // Create mailto URL
-    const mailtoUrl = `mailto:${toRecipients.join(",")}?cc=${ccRecipients.join(",")}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-    // Open email client
-    Linking.openURL(mailtoUrl).catch((err) => {
-      console.error("Error opening email client:", err);
-      alert("Nie można otworzyć klienta poczty");
-    });
   };
 
   return (
@@ -437,169 +510,167 @@ Pozdrawiam, `;
 
         {/* Form */}
         <View style={styles.form}>
-          {/* Absent Employee */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: labelColor }]}>Nieobecny pracownik</Text>
-            <AutocompleteDropdown
-              value={absentEmployee}
-              onChangeText={setAbsentEmployee}
-              placeholder="Wybierz lub wpisz..."
-              data={employees}
-              onSelect={setAbsentEmployee}
-              surfaceColor={surfaceColor}
-              textColor={textColor}
-            />
-          </View>
-
-          {/* Absent Department */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: labelColor }]}>Dział</Text>
-            <DepartmentToggle
-              value={absentDepartment}
-              onValueChange={setAbsentDepartment}
-              textColor={textColor}
-              surfaceColor={surfaceColor}
-            />
-          </View>
-
-          {/* Reason Selection */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: labelColor }]}>Powód nieobecności</Text>
-            <ReasonSelector
-              value={absentReason}
-              onValueChange={setAbsentReason}
-              textColor={textColor}
-              surfaceColor={surfaceColor}
-            />
-          </View>
-
-          {/* Shift */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: labelColor }]}>Zmiana</Text>
-            <View style={styles.segmentedControl}>
-              {["D", "M", "N"].map((shiftOption) => (
-                <Pressable
-                  key={shiftOption}
-                  style={[
-                    styles.segmentButton,
-                    shift === shiftOption && styles.segmentButtonActive,
-                    {
-                      backgroundColor: shift === shiftOption ? accentColor : surfaceColor,
-                      borderColor: shift === shiftOption ? accentColor : "#2C2C2C",
-                    },
-                  ]}
-                  onPress={() => setShift(shiftOption)}
-                >
-                  <Text
-                    style={[
-                      styles.segmentButtonText,
-                      shift === shiftOption && styles.segmentButtonTextActive,
-                      { color: shift === shiftOption ? "#FFF" : labelColor },
-                    ]}
-                  >
-                    {shiftOption}
-                  </Text>
-                </Pressable>
-              ))}
+          {/* SECTION 1: Absent Employee */}
+          <View style={[styles.section, { borderColor: accentColor, backgroundColor: surfaceColor }]}>
+            <Text style={[styles.sectionTitle, { color: accentColor }]}>Nieobecny pracownik</Text>
+            
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: labelColor }]}>Imię i nazwisko</Text>
+              <AutocompleteDropdown
+                value={absentEmployee}
+                onChangeText={setAbsentEmployee}
+                placeholder="Wybierz lub wpisz..."
+                data={employees}
+                onSelect={setAbsentEmployee}
+                surfaceColor={surfaceColor}
+                textColor={textColor}
+              />
             </View>
-          </View>
 
-          {/* Substitute Employee */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: labelColor }]}>Zastępca</Text>
-            <AutocompleteDropdown
-              value={substituteEmployee}
-              onChangeText={setSubstituteEmployee}
-              placeholder="Wybierz lub wpisz..."
-              data={employees}
-              onSelect={setSubstituteEmployee}
-              surfaceColor={surfaceColor}
-              textColor={textColor}
-            />
-          </View>
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: labelColor }]}>Dział</Text>
+              <DepartmentToggle
+                value={absentDepartment}
+                onValueChange={setAbsentDepartment}
+                textColor={textColor}
+                surfaceColor={surfaceColor}
+              />
+            </View>
 
-          {/* Substitute Department */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: labelColor }]}>Dział zastępcy</Text>
-            <DepartmentToggle
-              value={substituteDepartment}
-              onValueChange={setSubstituteDepartment}
-              textColor={textColor}
-              surfaceColor={surfaceColor}
-            />
-          </View>
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: labelColor }]}>Powód nieobecności</Text>
+              <ReasonSelector
+                value={absentReason}
+                onValueChange={setAbsentReason}
+                textColor={textColor}
+                surfaceColor={surfaceColor}
+              />
+            </View>
 
-          {/* Agency (conditional) */}
-          {showAgencyField && (
-            <View style={[styles.fieldContainer, styles.agencyFieldHighlight]}>
-              <Text style={[styles.label, { color: labelColor }]}>Agencja</Text>
-              <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
-                <Picker
-                  selectedValue={selectedAgency}
-                  onValueChange={setSelectedAgency}
-                  style={[styles.picker, { color: textColor }]}
-                  dropdownIconColor={textColor}
-                >
-                  <Picker.Item label="Wybierz agencję..." value="" />
-                  {agencies.map((agency) => (
-                    <Picker.Item key={agency.name} label={agency.name} value={agency.name} />
-                  ))}
-                </Picker>
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: labelColor }]}>Zmiana</Text>
+              <View style={styles.segmentedControl}>
+                {["D", "M", "N"].map((shiftOption) => (
+                  <Pressable
+                    key={shiftOption}
+                    style={[
+                      styles.segmentButton,
+                      shift === shiftOption && styles.segmentButtonActive,
+                      {
+                        backgroundColor: shift === shiftOption ? accentColor : surfaceColor,
+                        borderColor: shift === shiftOption ? accentColor : "#2C2C2C",
+                      },
+                    ]}
+                    onPress={() => setShift(shiftOption)}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentButtonText,
+                        shift === shiftOption && styles.segmentButtonTextActive,
+                        { color: shift === shiftOption ? "#FFF" : labelColor },
+                      ]}
+                    >
+                      {shiftOption}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
             </View>
-          )}
-
-          {/* Date */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: labelColor }]}>Data</Text>
-            <Pressable
-              style={[styles.input, styles.dateInput, { backgroundColor: surfaceColor }]}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={{ color: textColor, fontSize: 16 }}>{formatDate(date)}</Text>
-              <Ionicons name="calendar-outline" size={20} color={textColor} />
-            </Pressable>
           </View>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event: any, selectedDate?: Date) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (selectedDate) {
-                  setDate(selectedDate);
-                }
-              }}
-            />
-          )}
+          {/* SECTION 2: Substitute Employee */}
+          <View style={[styles.section, { borderColor: accentColor, backgroundColor: surfaceColor }]}>
+            <Text style={[styles.sectionTitle, { color: accentColor }]}>Zastępca</Text>
+            
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: labelColor }]}>Imię i nazwisko</Text>
+              <AutocompleteDropdown
+                value={substituteEmployee}
+                onChangeText={setSubstituteEmployee}
+                placeholder="Wybierz lub wpisz..."
+                data={employees}
+                onSelect={setSubstituteEmployee}
+                surfaceColor={surfaceColor}
+                textColor={textColor}
+              />
+            </View>
 
-          {/* Send Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.sendButton,
-              pressed && styles.sendButtonPressed,
-              { backgroundColor: accentColor },
-            ]}
-            onPress={handleSendEmail}
-          >
-            <Ionicons name="mail-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-            <Text style={styles.sendButtonText}>Wyślij e-mail</Text>
-          </Pressable>
+            {showAgencyField && (
+              <View style={styles.fieldContainer}>
+                <Text style={[styles.label, { color: labelColor }]}>Agencja</Text>
+                <View style={[styles.pickerContainer, { backgroundColor: surfaceColor }]}>
+                  <Picker
+                    selectedValue={selectedAgency}
+                    onValueChange={setSelectedAgency}
+                    style={[styles.picker, { color: textColor }]}
+                    dropdownIconColor={textColor}
+                  >
+                    <Picker.Item label="Wybierz agencję..." value="" />
+                    {agencies.map((agency) => (
+                      <Picker.Item key={agency.name} label={agency.name} value={agency.name} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            )}
 
-          {/* Journal Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.journalButton,
-              pressed && styles.journalButtonPressed,
-              { backgroundColor: surfaceColor, borderColor: accentColor },
-            ]}
-            onPress={() => router.push("/journal")}
-          >
-            <Ionicons name="list-outline" size={20} color={accentColor} style={{ marginRight: 8 }} />
-            <Text style={[styles.journalButtonText, { color: accentColor }]}>Historia zamian</Text>
-          </Pressable>
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: labelColor }]}>Dział</Text>
+              <DepartmentToggle
+                value={substituteDepartment}
+                onValueChange={setSubstituteDepartment}
+                textColor={textColor}
+                surfaceColor={surfaceColor}
+              />
+            </View>
+          </View>
+
+          {/* SECTION 3: Date and Send Button */}
+          <View style={[styles.section, { borderColor: accentColor, backgroundColor: surfaceColor }]}>
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: labelColor }]}>Data</Text>
+              <Pressable
+                style={[styles.input, styles.dateInput, { backgroundColor: surfaceColor, borderColor: accentColor }]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: textColor, fontSize: 16 }}>{formatDate(date)}</Text>
+                <Ionicons name="calendar-outline" size={20} color={accentColor} />
+              </Pressable>
+            </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(event: any, selectedDate?: Date) => {
+                  setShowDatePicker(Platform.OS === "ios");
+                  if (selectedDate) {
+                    setDate(selectedDate);
+                  }
+                }}
+              />
+            )}
+
+            {/* Send Button */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.sendButton,
+                pressed && styles.sendButtonPressed,
+                sending && styles.sendButtonDisabled,
+                { backgroundColor: accentColor },
+              ]}
+              onPress={handleSendEmail}
+              disabled={sending}
+            >
+              {sending ? (
+                <ActivityIndicator color="#FFF" size="small" style={{ marginRight: 8 }} />
+              ) : (
+                <Ionicons name="mail-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+              )}
+              <Text style={styles.sendButtonText}>{sending ? "Wysyłanie..." : "Wyślij e-mail"}</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -618,7 +689,7 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     paddingVertical: 16,
-    marginBottom: 16,
+    marginBottom: 24,
     borderRadius: 12,
   },
   logoContainer: {
@@ -649,8 +720,18 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   form: {
-    gap: 14,
-    marginBottom: 20,
+    gap: 20,
+  },
+  section: {
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8,
   },
   fieldContainer: {
     gap: 8,
@@ -658,160 +739,129 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: "600",
-    letterSpacing: 0.5,
   },
   input: {
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     fontSize: 16,
-    minHeight: 50,
     borderWidth: 1,
     borderColor: "#2C2C2C",
   },
   autocompleteContainer: {
     position: "relative",
-    zIndex: 1,
+    zIndex: 1000,
   },
   dropdownList: {
-    borderRadius: 10,
-    marginTop: -4,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    maxHeight: 200,
+    borderRadius: 8,
+    marginTop: 4,
     borderWidth: 1,
     borderColor: "#2C2C2C",
-    borderTopWidth: 0,
+    maxHeight: 200,
   },
   dropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#2C2C2C",
   },
   toggleContainer: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
   },
   toggleButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#2C2C2C",
+    alignItems: "center",
   },
   toggleButtonActive: {
     borderColor: "#2196F3",
   },
-  toggleText: {
+  toggleButtonText: {
     fontSize: 14,
     fontWeight: "600",
   },
+  toggleButtonTextActive: {
+    color: "#FFF",
+  },
   reasonContainer: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
   },
   reasonButton: {
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 8,
     borderWidth: 1,
+    borderColor: "#2C2C2C",
+    alignItems: "center",
   },
   reasonButtonActive: {
     borderColor: "#2196F3",
   },
   reasonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    textAlign: "center",
-  },
-  dateInput: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  pickerContainer: {
-    borderRadius: 10,
-    overflow: "hidden",
-    minHeight: 50,
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#2C2C2C",
-  },
-  picker: {
-    height: 50,
-    color: "#FFFFFF",
-  },
-  agencyFieldHighlight: {
-    borderWidth: 2,
-    borderColor: "#2196F3",
-    borderRadius: 10,
-    padding: 8,
-  },
-  sendButton: {
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 54,
-    marginTop: 12,
-    flexDirection: "row",
-  },
-  sendButtonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  sendButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  journalButton: {
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 54,
-    flexDirection: "row",
-    borderWidth: 2,
-  },
-  journalButtonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  journalButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
   },
   segmentedControl: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    alignItems: "center",
   },
   segmentButtonActive: {
     borderColor: "#2196F3",
   },
   segmentButtonText: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   segmentButtonTextActive: {
-    color: "#FFFFFF",
+    color: "#FFF",
+  },
+  pickerContainer: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2C2C2C",
+    overflow: "hidden",
+  },
+  picker: {
+    height: 50,
+  },
+  dateInput: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  sendButton: {
+    flexDirection: "row",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  sendButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
+  },
+  sendButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
