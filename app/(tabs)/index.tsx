@@ -17,7 +17,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -223,7 +224,7 @@ export default function HomeScreen() {
   const [employees, setEmployees] = useState<string[]>(FALLBACK_EMPLOYEES);
   const [agencies, setAgencies] = useState<Agency[]>(FALLBACK_AGENCIES);
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+    // Removed refreshing state - no longer needed
 
   // Form state
   const [absentEmployee, setAbsentEmployee] = useState("");
@@ -239,10 +240,14 @@ export default function HomeScreen() {
   // UI state
   const [showAgencyField, setShowAgencyField] = useState(false);
 
-  // Load cached data on mount
+  // Load cached data on mount and subscribe to employee list changes
   useEffect(() => {
     loadCachedData();
-    fetchData();
+    // Set up interval to check for employee list updates
+    const interval = setInterval(() => {
+      loadCachedData();
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Check if substitute is from external agency
@@ -253,6 +258,13 @@ export default function HomeScreen() {
       setSelectedAgency("");
     }
   }, [substituteEmployee, employees]);
+
+  // Listen for employee list changes from other tabs
+  useFocusEffect(
+    useCallback(() => {
+      loadCachedData();
+    }, [])
+  );
 
   const loadCachedData = async () => {
     try {
@@ -321,11 +333,7 @@ export default function HomeScreen() {
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
-  };
+  // Removed handleRefresh - employees now sync from local employees_list only
 
   const formatDate = (date: Date): string => {
     const day = String(date.getDate()).padStart(2, "0");
@@ -478,13 +486,7 @@ Pozdrawiam, `;
               style={styles.headerTitle}
               resizeMode="contain"
             />
-            <Pressable onPress={handleRefresh} disabled={loading || refreshing} style={styles.refreshButton}>
-              {loading ? (
-                <ActivityIndicator size="small" color={textColor} />
-              ) : (
-                <Ionicons name="refresh" size={24} color={textColor} />
-              )}
-            </Pressable>
+
           </View>
         </View>
 
