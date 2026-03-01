@@ -82,7 +82,7 @@ export default function RootLayout() {
 
   // Show custom splash screen while app is loading
   if (!appReady) {
-    return <CustomSplashScreen />;
+    return <CustomSplashScreen onComplete={() => setAppReady(true)} />;
   }
 
   const content = (
