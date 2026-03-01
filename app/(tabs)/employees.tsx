@@ -9,6 +9,8 @@ import {
   TextInput,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -244,16 +246,17 @@ export default function EmployeesScreen() {
         animationType="slide"
         onRequestClose={() => setShowAddModal(false)}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
-          <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: textColor }]}>Dodaj pracownika</Text>
-              <Pressable onPress={() => setShowAddModal(false)}>
-                <Ionicons name="close" size={24} color={textColor} />
-              </Pressable>
-            </View>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+            <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>Dodaj pracownika</Text>
+                <Pressable onPress={() => setShowAddModal(false)}>
+                  <Ionicons name="close" size={24} color={textColor} />
+                </Pressable>
+              </View>
 
-            <View style={styles.modalForm}>
+              <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
               <View style={styles.formField}>
                 <Text style={[styles.formLabel, { color: labelColor }]}>Imię i nazwisko</Text>
                 <TextInput
@@ -304,9 +307,10 @@ export default function EmployeesScreen() {
                   <Text style={[styles.buttonText, { color: "#FFF" }]}>Dodaj</Text>
                 </Pressable>
               </View>
+              </ScrollView>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
