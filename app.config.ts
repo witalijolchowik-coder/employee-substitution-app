@@ -66,9 +66,23 @@ const config: ExpoConfig = {
   web: {
     output: "static",
     favicon: "./assets/images/favicon.png",
+    splash: {
+      image: "./assets/images/header-combined.png",
+      resizeMode: "contain",
+      backgroundColor: "#0B1929",
+    },
   },
   plugins: [
     "expo-router",
+    [
+      "expo-splash-screen",
+      {
+        image: "./assets/images/header-combined.png",
+        imageWidth: 200,
+        resizeMode: "contain",
+        backgroundColor: "#0B1929",
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

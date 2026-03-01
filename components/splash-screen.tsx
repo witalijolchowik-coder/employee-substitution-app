@@ -8,7 +8,7 @@ export function CustomSplashScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <Image
-        source={require("@/assets/images/splash-icon.png")}
+        source={require("@/assets/images/header-combined.png")}
         style={styles.logo}
         resizeMode="contain"
       />
