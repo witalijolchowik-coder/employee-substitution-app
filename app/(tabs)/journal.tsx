@@ -110,95 +110,62 @@ export default function JournalScreen() {
   };
 
   const renderEntry = ({ item }: { item: JournalEntry }) => {
-    const panX = useRef(new Animated.Value(0)).current;
-    const panResponder = useRef(
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (evt, gestureState) => Math.abs(gestureState.dx) > 10,
-        onPanResponderMove: (evt, gestureState) => {
-          if (gestureState.dx < 0) {
-            panX.setValue(Math.max(gestureState.dx, -80));
-          }
-        },
-        onPanResponderRelease: (evt, gestureState) => {
-          if (gestureState.dx < -40) {
-            Animated.timing(panX, {
-              toValue: -80,
-              duration: 200,
-              useNativeDriver: false,
-            }).start();
-          } else {
-            Animated.timing(panX, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: false,
-            }).start();
-          }
-        },
-      })
-    ).current;
-
     return (
-      <Animated.View style={[{ transform: [{ translateX: panX }] }]} {...panResponder.panHandlers}>
-        <View style={[styles.entryCard, { backgroundColor: surfaceColor, borderColor: accentColor }]}>
-          {/* Header with date and shift */}
-          <View style={styles.entryHeader}>
-            <View style={styles.headerLeft}>
-              <Text style={[styles.entryDate, { color: accentColor }]}>{item.date}</Text>
-              <Text style={[styles.entryTime, { color: labelColor }]}>
-                <Ionicons name="time-outline" size={12} color={labelColor} /> {formatTime(item.timestamp)}
-              </Text>
-            </View>
-        <View style={[styles.shiftBadge, { backgroundColor: accentColor }]}>
-          <Text style={[styles.shiftText, { fontSize: 28, fontWeight: "bold" }]}>{item.shift}</Text>
-        </View>
+      <View style={[styles.entryCard, { backgroundColor: surfaceColor, borderColor: accentColor }]}>
+        {/* Header with date and shift */}
+        <View style={styles.entryHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={[styles.entryDate, { color: accentColor }]}>{item.date}</Text>
+            <Text style={[styles.entryTime, { color: labelColor }]}>
+              <Ionicons name="time-outline" size={12} color={labelColor} /> {formatTime(item.timestamp)}
+            </Text>
           </View>
-
-          {/* Main content */}
-          <View style={styles.entryContent}>
-            {/* Absent employee */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionLabel, { color: labelColor }]}>Nieobecny pracownik</Text>
-              <Text style={[styles.employeeName, { color: textColor }]}>{item.absentEmployee}</Text>
-              <View style={styles.detailRow}>
-                <Text style={[styles.detailLabel, { color: labelColor }]}>Dział:</Text>
-                <Text style={[styles.detailValue, { color: accentColor }]}>{item.absentDepartment}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={[styles.detailLabel, { color: labelColor }]}>Powód:</Text>
-                <Text style={[styles.detailValue, { color: textColor }]}>{item.reason}</Text>
-              </View>
-            </View>
-
-            {/* Substitute employee */}
-            <View style={[styles.section, { borderTopWidth: 1, borderTopColor: labelColor + "30", paddingTop: 12, marginTop: 12 }]}>
-              <Text style={[styles.sectionLabel, { color: labelColor }]}>Zastępca</Text>
-              <Text style={[styles.employeeName, { color: textColor }]}>{item.substituteEmployee}</Text>
-              <View style={styles.detailRow}>
-                <Text style={[styles.detailLabel, { color: labelColor }]}>Dział:</Text>
-                <Text style={[styles.detailValue, { color: accentColor }]}>{item.substituteDepartment}</Text>
-              </View>
-              {item.agency && (
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: labelColor }]}>Agencja:</Text>
-                  <Text style={[styles.detailValue, { color: textColor }]}>{item.agency}</Text>
-                </View>
-              )}
-            </View>
+          <View style={[styles.shiftBadge, { backgroundColor: accentColor }]}>
+            <Text style={[styles.shiftText, { fontSize: 28, fontWeight: "bold" }]}>{item.shift}</Text>
           </View>
         </View>
-        {/* Swipe delete background */}
-        <View
-          style={[styles.swipeDeleteBackground, { position: "absolute", right: 0, top: 0, bottom: 0 }]}
+
+        {/* Main content */}
+        <View style={styles.entryContent}>
+          {/* Absent employee */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: labelColor }]}>Nieobecny pracownik</Text>
+            <Text style={[styles.employeeName, { color: textColor }]}>{item.absentEmployee}</Text>
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: labelColor }]}>Dział:</Text>
+              <Text style={[styles.detailValue, { color: accentColor }]}>{item.absentDepartment}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: labelColor }]}>Powód:</Text>
+              <Text style={[styles.detailValue, { color: textColor }]}>{item.reason}</Text>
+            </View>
+          </View>
+
+          {/* Substitute employee */}
+          <View style={[styles.section, { borderTopWidth: 1, borderTopColor: labelColor + "30", paddingTop: 12, marginTop: 12 }]}>
+            <Text style={[styles.sectionLabel, { color: labelColor }]}>Zastępca</Text>
+            <Text style={[styles.employeeName, { color: textColor }]}>{item.substituteEmployee}</Text>
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: labelColor }]}>Dział:</Text>
+              <Text style={[styles.detailValue, { color: accentColor }]}>{item.substituteDepartment}</Text>
+            </View>
+            {item.agency && (
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailLabel, { color: labelColor }]}>Agencja:</Text>
+                <Text style={[styles.detailValue, { color: textColor }]}>{item.agency}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Delete button */}
+        <Pressable
+          onPress={() => deleteEntry(item.id)}
+          style={({ pressed }) => [styles.deleteButton, pressed && { opacity: 0.7 }]}
         >
-          <Pressable
-            onPress={() => deleteEntry(item.id)}
-            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-          >
-            <Ionicons name="trash-outline" size={24} color="#FFF" />
-          </Pressable>
-        </View>
-      </Animated.View>
+          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+        </Pressable>
+      </View>
     );
   };
 

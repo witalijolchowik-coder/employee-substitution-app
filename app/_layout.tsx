@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -25,6 +26,9 @@ const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+// Hide splash screen on app load
+SplashScreen.hideAsync().catch(() => {});
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

@@ -685,9 +685,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   headerCombined: {
-    width: "80%",
-    height: 120,
-    marginBottom: 16,
+    width: "90%",
+    height: 160,
+    marginBottom: 24,
     alignSelf: "center",
   },
   logoContainer: {
