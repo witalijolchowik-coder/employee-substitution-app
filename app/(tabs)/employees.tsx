@@ -57,6 +57,8 @@ export default function EmployeesScreen() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newEmployeeName, setNewEmployeeName] = useState("");
   const [newEmployeeDepartment, setNewEmployeeDepartment] = useState("Outbound");
 
@@ -110,6 +112,33 @@ export default function EmployeesScreen() {
     setShowAddModal(false);
   };
 
+  const editEmployee = async () => {
+    if (!editingEmployee || !newEmployeeName.trim()) {
+      Alert.alert("Błąd", "Podaj imię pracownika");
+      return;
+    }
+
+    const updated = employees.map((e) =>
+      e.id === editingEmployee.id
+        ? { ...e, name: newEmployeeName.trim(), department: newEmployeeDepartment }
+        : e
+    );
+    setEmployees(updated);
+    await AsyncStorage.setItem("employees_list", JSON.stringify(updated));
+
+    setNewEmployeeName("");
+    setNewEmployeeDepartment("Outbound");
+    setEditingEmployee(null);
+    setShowEditModal(false);
+  };
+
+  const startEdit = (employee: Employee) => {
+    setEditingEmployee(employee);
+    setNewEmployeeName(employee.name);
+    setNewEmployeeDepartment(employee.department);
+    setShowEditModal(true);
+  };
+
   const deleteEmployee = async (id: string) => {
     Alert.alert(
       "Usuń pracownika",
@@ -140,12 +169,20 @@ export default function EmployeesScreen() {
           <Text style={[styles.agencyText, { color: labelColor }]}>Agencja: {item.agency}</Text>
         )}
       </View>
-      <Pressable
-        style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
-        onPress={() => deleteEmployee(item.id)}
-      >
-        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-      </Pressable>
+      <View style={styles.actionButtons}>
+        <Pressable
+          style={({ pressed }) => [styles.editBtn, pressed && styles.editBtnPressed]}
+          onPress={() => startEdit(item)}
+        >
+          <Ionicons name="pencil-outline" size={20} color={accentColor} />
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
+          onPress={() => deleteEmployee(item.id)}
+        >
+          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+        </Pressable>
+      </View>
     </View>
   );
 
@@ -271,6 +308,77 @@ export default function EmployeesScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showEditModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+          <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: textColor }]}>Edytuj pracownika</Text>
+              <Pressable onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close" size={24} color={textColor} />
+              </Pressable>
+            </View>
+
+            <View style={styles.modalForm}>
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { color: labelColor }]}>Imię i nazwisko</Text>
+                <TextInput
+                  style={[
+                    styles.formInput,
+                    { color: textColor, backgroundColor: backgroundColor, borderColor: accentColor },
+                  ]}
+                  placeholder="Wpisz imię..."
+                  placeholderTextColor={labelColor}
+                  value={newEmployeeName}
+                  onChangeText={setNewEmployeeName}
+                />
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { color: labelColor }]}>Dział</Text>
+                <View style={[styles.pickerContainer, { backgroundColor: backgroundColor, borderColor: accentColor }]}>
+                  <Picker
+                    selectedValue={newEmployeeDepartment}
+                    onValueChange={setNewEmployeeDepartment}
+                    style={{ color: textColor }}
+                  >
+                    {DEPARTMENTS.map((dept) => (
+                      <Picker.Item key={dept} label={dept} value={dept} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.cancelButton,
+                    { backgroundColor: labelColor + "20", opacity: pressed ? 0.8 : 1 },
+                  ]}
+                  onPress={() => setShowEditModal(false)}
+                >
+                  <Text style={[styles.buttonText, { color: labelColor }]}>Anuluj</Text>
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.saveButton,
+                    { backgroundColor: accentColor, opacity: pressed ? 0.8 : 1 },
+                  ]}
+                  onPress={editEmployee}
+                >
+                  <Text style={[styles.buttonText, { color: "#FFF" }]}>Zapisz</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -340,6 +448,18 @@ const styles = StyleSheet.create({
   },
   agencyText: {
     fontSize: 12,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  editBtn: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "rgba(33, 150, 243, 0.1)",
+  },
+  editBtnPressed: {
+    backgroundColor: "rgba(33, 150, 243, 0.2)",
   },
   deleteBtn: {
     padding: 8,

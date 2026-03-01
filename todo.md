@@ -86,3 +86,18 @@
 - [x] Implement dynamic recipient logic (add xdr1-in@id-logistics.com when Inbound)
 - [x] Fix data synchronization from GitHub Gist
 - [x] Add comprehensive logging for debugging
+
+## Employee Management (Pracownicy Tab)
+- [x] Create employees management screen with add/delete functionality
+- [x] Implement employee editing functionality (edit name and department)
+- [x] Add edit button (pencil icon) to each employee card
+- [x] Create edit modal dialog
+- [x] Save edited employee changes to AsyncStorage
+- [x] Display edit and delete buttons side-by-side
+
+## Auto-Department Selection
+- [x] Implement automatic department selection for absent employee
+- [x] Implement automatic department selection for substitute employee
+- [x] Track full employee objects with department information
+- [x] Default external agency employees to Outbound department
+- [x] Update employeeObjects state when loading from AsyncStorage

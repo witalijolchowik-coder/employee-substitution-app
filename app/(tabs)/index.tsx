@@ -222,6 +222,7 @@ export default function HomeScreen() {
 
   // Data state
   const [employees, setEmployees] = useState<string[]>(FALLBACK_EMPLOYEES);
+  const [employeeObjects, setEmployeeObjects] = useState<any[]>([]); // Full employee objects with departments
   const [agencies, setAgencies] = useState<Agency[]>(FALLBACK_AGENCIES);
   const [loading, setLoading] = useState(false);
     // Removed refreshing state - no longer needed
@@ -250,14 +251,32 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // Check if substitute is from external agency
+  // Check if substitute is from external agency and auto-select department
   useEffect(() => {
     const isFromList = employees.includes(substituteEmployee);
     setShowAgencyField(!isFromList && substituteEmployee.length > 0);
     if (isFromList) {
       setSelectedAgency("");
+      // Auto-select department when employee is selected from list
+      const selectedEmp = employeeObjects.find((e) => e.name === substituteEmployee);
+      if (selectedEmp) {
+        setSubstituteDepartment(selectedEmp.department || "Outbound");
+      }
+    } else if (substituteEmployee.length > 0) {
+      // External agency employees default to Outbound
+      setSubstituteDepartment("Outbound");
     }
-  }, [substituteEmployee, employees]);
+  }, [substituteEmployee, employees, employeeObjects]);
+
+  // Auto-select department for absent employee
+  useEffect(() => {
+    if (absentEmployee) {
+      const selectedEmp = employeeObjects.find((e) => e.name === absentEmployee);
+      if (selectedEmp) {
+        setAbsentDepartment(selectedEmp.department || "Outbound");
+      }
+    }
+  }, [absentEmployee, employeeObjects]);
 
   // Listen for employee list changes from other tabs
   useFocusEffect(
@@ -277,9 +296,17 @@ export default function HomeScreen() {
         const names = parsed.map((emp: any) => emp.name);
         console.log("[Cache] Loaded employees from employees_list:", names.length, "items");
         setEmployees(names);
+        setEmployeeObjects(parsed);
       } else {
         console.log("[Cache] No employees_list, using fallback");
         setEmployees(FALLBACK_EMPLOYEES);
+        const fallbackObjs = FALLBACK_EMPLOYEES.map((name, idx) => ({
+          id: `emp_${idx}`,
+          name,
+          department: "Outbound",
+          isExternal: false,
+        }));
+        setEmployeeObjects(fallbackObjs);
       }
 
       if (cachedAgencies) {
@@ -294,6 +321,8 @@ export default function HomeScreen() {
       console.error("[Cache] Error loading cached data:", error);
       setEmployees(FALLBACK_EMPLOYEES);
       setAgencies(FALLBACK_AGENCIES);
+      const fallbackObjs = FALLBACK_EMPLOYEES.map((name, idx) => ({id: `emp_${idx}`, name, department: "Outbound", isExternal: false}));
+      setEmployeeObjects(fallbackObjs);
     }
   };
 
@@ -468,26 +497,13 @@ Pozdrawiam, `;
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header with Logo and Slogan - Unified Background */}
+        {/* Header with Combined Logo and Slogan */}
         <View style={[styles.headerSection, { backgroundColor: backgroundColor }]}>
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/images/id-logistics-logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-
-          {/* Header Title */}
-          <View style={styles.headerTitleContainer}>
-            <Image
-              source={require("@/assets/images/header-title.png")}
-              style={styles.headerTitle}
-              resizeMode="contain"
-            />
-
-          </View>
+          <Image
+            source={require("@/assets/images/header-combined.png")}
+            style={styles.headerCombined}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Form */}
@@ -667,6 +683,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginBottom: 16,
     borderRadius: 12,
+  },
+  headerCombined: {
+    width: "100%",
+    height: 280,
+    marginBottom: 16,
   },
   logoContainer: {
     alignItems: "center",
