@@ -158,13 +158,15 @@ export default function JournalScreen() {
           </View>
         </View>
 
-        {/* Delete button */}
-        <Pressable
-          onPress={() => deleteEntry(item.id)}
-          style={({ pressed }) => [styles.deleteButton, pressed && { opacity: 0.7 }]}
-        >
-          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-        </Pressable>
+        {/* Delete button - bottom right */}
+        <View style={styles.deleteButtonContainer}>
+          <Pressable
+            onPress={() => deleteEntry(item.id)}
+            style={({ pressed }) => [styles.deleteButton, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+          </Pressable>
+        </View>
       </View>
     );
   };
@@ -320,5 +322,12 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 14,
+  },
+  deleteButtonContainer: {
+    alignItems: "flex-end",
+    paddingTop: 8,
+  },
+  deleteButton: {
+    padding: 8,
   },
 });

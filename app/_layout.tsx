@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
+import { CustomSplashScreen } from "@/components/splash-screen";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -37,10 +38,14 @@ export default function RootLayout() {
 
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
+  const [appReady, setAppReady] = useState(false);
 
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {
     initManusRuntime();
+    // Mark app as ready after a short delay to show custom splash screen
+    const timer = setTimeout(() => setAppReady(true), 1000);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
@@ -74,6 +79,11 @@ export default function RootLayout() {
     () => initialWindowMetrics ?? { insets: initialInsets, frame: initialFrame },
     [initialFrame, initialInsets],
   );
+
+  // Show custom splash screen while app is loading
+  if (!appReady) {
+    return <CustomSplashScreen />;
+  }
 
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>

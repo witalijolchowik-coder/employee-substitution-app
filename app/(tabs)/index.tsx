@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     paddingVertical: 16,
-    marginBottom: 16,
+    marginBottom: 0,
     borderRadius: 12,
   },
   headerCombined: {
@@ -718,7 +718,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   form: {
-    gap: 20,
+    gap: 12,
+    marginTop: -8,
   },
   section: {
     borderRadius: 12,
