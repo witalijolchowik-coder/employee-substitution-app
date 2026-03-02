@@ -68,8 +68,7 @@ export default function EmployeesScreen() {
   const [statistics, setStatistics] = useState<Record<string, { zastepca: number; nieobecny: number }>>({});
 
   useEffect(() => {
-    loadEmployees();
-    loadStatistics();
+    loadEmployees().then(() => loadStatistics());
   }, []);
 
   useEffect(() => {
@@ -82,8 +81,10 @@ export default function EmployeesScreen() {
   const loadEmployees = async () => {
     try {
       const stored = await AsyncStorage.getItem("employees_list");
+      let emps: Employee[] = [];
       if (stored) {
         const parsed = JSON.parse(stored);
+        emps = parsed;
         setEmployees(parsed);
       } else {
         // Initialize with fallback employees
@@ -93,11 +94,14 @@ export default function EmployeesScreen() {
           department: emp.department,
           isExternal: false,
         }));
+        emps = initialEmployees;
         setEmployees(initialEmployees);
         await AsyncStorage.setItem("employees_list", JSON.stringify(initialEmployees));
       }
+      return emps;
     } catch (error) {
       console.error("Error loading employees:", error);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -411,17 +415,22 @@ export default function EmployeesScreen() {
         animationType="slide"
         onRequestClose={() => setShowEditModal(false)}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
-          <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: textColor }]}>Edytuj pracownika</Text>
-              <Pressable onPress={() => setShowEditModal(false)}>
-                <Ionicons name="close" size={24} color={textColor} />
-              </Pressable>
-            </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+            <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>Edytuj pracownika</Text>
+                <Pressable onPress={() => setShowEditModal(false)}>
+                  <Ionicons name="close" size={24} color={textColor} />
+                </Pressable>
+              </View>
 
-            <View style={styles.modalForm}>
-              <View style={styles.formField}>
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                <View style={styles.modalForm}>
+                  <View style={styles.formField}>
                 <Text style={[styles.formLabel, { color: labelColor }]}>Imię i nazwisko</Text>
                 <TextInput
                   style={[
@@ -435,45 +444,47 @@ export default function EmployeesScreen() {
                 />
               </View>
 
-              <View style={styles.formField}>
-                <Text style={[styles.formLabel, { color: labelColor }]}>Dział</Text>
-                <View style={[styles.pickerContainer, { backgroundColor: backgroundColor, borderColor: accentColor }]}>
-                  <Picker
-                    selectedValue={newEmployeeDepartment}
-                    onValueChange={setNewEmployeeDepartment}
-                    style={{ color: textColor }}
-                  >
-                    {DEPARTMENTS.map((dept) => (
-                      <Picker.Item key={dept} label={dept} value={dept} />
-                    ))}
-                  </Picker>
+                  <View style={styles.formField}>
+                    <Text style={[styles.formLabel, { color: labelColor }]}>Dział</Text>
+                    <View style={[styles.pickerContainer, { backgroundColor: backgroundColor, borderColor: accentColor }]}>
+                      <Picker
+                        selectedValue={newEmployeeDepartment}
+                        onValueChange={setNewEmployeeDepartment}
+                        style={{ color: textColor }}
+                      >
+                        {DEPARTMENTS.map((dept) => (
+                          <Picker.Item key={dept} label={dept} value={dept} />
+                        ))}
+                      </Picker>
+                    </View>
+                  </View>
+
+                  <View style={styles.modalButtons}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.cancelButton,
+                        { backgroundColor: labelColor + "20", opacity: pressed ? 0.8 : 1 },
+                      ]}
+                      onPress={() => setShowEditModal(false)}
+                    >
+                      <Text style={[styles.buttonText, { color: labelColor }]}>Anuluj</Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.saveButton,
+                        { backgroundColor: accentColor, opacity: pressed ? 0.8 : 1 },
+                      ]}
+                      onPress={editEmployee}
+                    >
+                      <Text style={[styles.buttonText, { color: "#FFF" }]}>Zapisz</Text>
+                    </Pressable>
+                  </View>
                 </View>
-              </View>
-
-              <View style={styles.modalButtons}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.cancelButton,
-                    { backgroundColor: labelColor + "20", opacity: pressed ? 0.8 : 1 },
-                  ]}
-                  onPress={() => setShowEditModal(false)}
-                >
-                  <Text style={[styles.buttonText, { color: labelColor }]}>Anuluj</Text>
-                </Pressable>
-
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.saveButton,
-                    { backgroundColor: accentColor, opacity: pressed ? 0.8 : 1 },
-                  ]}
-                  onPress={editEmployee}
-                >
-                  <Text style={[styles.buttonText, { color: "#FFF" }]}>Zapisz</Text>
-                </Pressable>
-              </View>
+              </ScrollView>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Context Menu Modal */}

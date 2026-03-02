@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: -8,
     marginBottom: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
   },
   section: {
     borderRadius: 12,
