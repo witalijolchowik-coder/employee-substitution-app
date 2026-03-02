@@ -204,17 +204,23 @@ export default function EmployeesScreen() {
         const entryDate = new Date(entry.date);
         if (entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear) {
           if (entry.substituteEmployee && entry.substituteEmployee.trim()) {
-            if (!stats[entry.substituteEmployee]) {
-              stats[entry.substituteEmployee] = { zastepca: 0, nieobecny: 0 };
+            const isInList = employees.some((emp) => emp.name === entry.substituteEmployee && !emp.isExternal);
+            if (isInList) {
+              if (!stats[entry.substituteEmployee]) {
+                stats[entry.substituteEmployee] = { zastepca: 0, nieobecny: 0 };
+              }
+              stats[entry.substituteEmployee].zastepca++;
             }
-            stats[entry.substituteEmployee].zastepca++;
           }
 
           if (entry.absentEmployee && entry.absentEmployee.trim()) {
-            if (!stats[entry.absentEmployee]) {
-              stats[entry.absentEmployee] = { zastepca: 0, nieobecny: 0 };
+            const isInList = employees.some((emp) => emp.name === entry.absentEmployee && !emp.isExternal);
+            if (isInList) {
+              if (!stats[entry.absentEmployee]) {
+                stats[entry.absentEmployee] = { zastepca: 0, nieobecny: 0 };
+              }
+              stats[entry.absentEmployee].nieobecny++;
             }
-            stats[entry.absentEmployee].nieobecny++;
           }
         }
       });
