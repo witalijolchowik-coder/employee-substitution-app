@@ -535,15 +535,37 @@ Pozdrawiam, `;
               />
             </View>
 
+
+          </View>
+
+          {/* SECTION 2: Absence Details */}
+          <View style={[styles.section, { borderColor: accentColor, backgroundColor: surfaceColor }]}>
+            <Text style={[styles.sectionTitle, { color: accentColor }]}>Szczegóły nieobecności</Text>
+            
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: labelColor }]}>Powód nieobecności</Text>
-              <ReasonSelector
-                value={absentReason}
-                onValueChange={setAbsentReason}
-                textColor={textColor}
-                surfaceColor={surfaceColor}
-              />
+              <Text style={[styles.label, { color: labelColor }]}>Data</Text>
+              <Pressable
+                style={[styles.input, styles.dateInput, { backgroundColor: surfaceColor, borderColor: "#3A4A5C" }]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: textColor, fontSize: 16 }}>{formatDate(date)}</Text>
+                <Ionicons name="calendar-outline" size={20} color={accentColor} />
+              </Pressable>
             </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(event: any, selectedDate?: Date) => {
+                  setShowDatePicker(Platform.OS === "ios");
+                  if (selectedDate) {
+                    setDate(selectedDate);
+                  }
+                }}
+              />
+            )}
 
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: labelColor }]}>Zmiana</Text>
@@ -556,7 +578,7 @@ Pozdrawiam, `;
                       shift === shiftOption && styles.segmentButtonActive,
                       {
                         backgroundColor: shift === shiftOption ? accentColor : surfaceColor,
-                        borderColor: shift === shiftOption ? accentColor : "#2C2C2C",
+                        borderColor: shift === shiftOption ? accentColor : "#3A4A5C",
                       },
                     ]}
                     onPress={() => setShift(shiftOption)}
@@ -574,9 +596,19 @@ Pozdrawiam, `;
                 ))}
               </View>
             </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: labelColor }]}>Powód nieobecności</Text>
+              <ReasonSelector
+                value={absentReason}
+                onValueChange={setAbsentReason}
+                textColor={textColor}
+                surfaceColor={surfaceColor}
+              />
+            </View>
           </View>
 
-          {/* SECTION 2: Substitute Employee */}
+          {/* SECTION 3: Substitute Employee */}
           <View style={[styles.section, { borderColor: accentColor, backgroundColor: surfaceColor }]}>
             <Text style={[styles.sectionTitle, { color: accentColor }]}>Zastępca</Text>
             
@@ -623,46 +655,21 @@ Pozdrawiam, `;
             </View>
           </View>
 
-          {/* SECTION 3: Date and Send Button */}
-          <View style={[styles.section, { borderColor: accentColor, backgroundColor: surfaceColor }]}>
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: labelColor }]}>Data</Text>
-              <Pressable
-                style={[styles.input, styles.dateInput, { backgroundColor: surfaceColor, borderColor: accentColor }]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={{ color: textColor, fontSize: 16 }}>{formatDate(date)}</Text>
-                <Ionicons name="calendar-outline" size={20} color={accentColor} />
-              </Pressable>
-            </View>
+        </View>
 
-            {showDatePicker && (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(event: any, selectedDate?: Date) => {
-                  setShowDatePicker(Platform.OS === "ios");
-                  if (selectedDate) {
-                    setDate(selectedDate);
-                  }
-                }}
-              />
-            )}
-
-            {/* Send Button */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.sendButton,
-                pressed && styles.sendButtonPressed,
-                { backgroundColor: accentColor },
-              ]}
-              onPress={handleSendEmail}
-            >
-              <Ionicons name="mail-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.sendButtonText}>Wyślij e-mail</Text>
-            </Pressable>
-          </View>
+        {/* Send Button - Separate from cards */}
+        <View style={styles.sendButtonContainer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.sendButton,
+              pressed && styles.sendButtonPressed,
+              { backgroundColor: accentColor },
+            ]}
+            onPress={handleSendEmail}
+          >
+            <Ionicons name="mail-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={styles.sendButtonText}>Wyślij e-mail</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -720,6 +727,8 @@ const styles = StyleSheet.create({
   form: {
     gap: 12,
     marginTop: -8,
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
   section: {
     borderRadius: 12,
@@ -822,7 +831,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: "#3A4A5C",
   },
   picker: {
     height: 50,
@@ -840,8 +849,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 54,
-    marginTop: 12,
     flexDirection: "row",
+  },
+  sendButtonContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   sendButtonPressed: {
     opacity: 0.85,

@@ -63,9 +63,20 @@ export default function EmployeesScreen() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newEmployeeName, setNewEmployeeName] = useState("");
   const [newEmployeeDepartment, setNewEmployeeDepartment] = useState("Outbound");
+  const [selectedEmployeeForMenu, setSelectedEmployeeForMenu] = useState<Employee | null>(null);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [statistics, setStatistics] = useState<Record<string, { zastepca: number; nieobecny: number }>>({});
 
   useEffect(() => {
     loadEmployees();
+    loadStatistics();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadStatistics();
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadEmployees = async () => {
@@ -141,7 +152,7 @@ export default function EmployeesScreen() {
     setShowEditModal(true);
   };
 
-  const deleteEmployee = async (id: string) => {
+    const deleteEmployee = (id: string) => {
     Alert.alert(
       "Usuń pracownika",
       "Czy na pewno chcesz usunąć tego pracownika?",
@@ -153,6 +164,7 @@ export default function EmployeesScreen() {
             const updated = employees.filter((e) => e.id !== id);
             setEmployees(updated);
             await AsyncStorage.setItem("employees_list", JSON.stringify(updated));
+            setShowContextMenu(false);
           },
           style: "destructive",
         },
@@ -160,8 +172,72 @@ export default function EmployeesScreen() {
     );
   };
 
+  const handleEditFromMenu = () => {
+    if (selectedEmployeeForMenu) {
+      startEdit(selectedEmployeeForMenu);
+      setShowContextMenu(false);
+    }
+  };
+
+  const handleDeleteFromMenu = () => {
+    if (selectedEmployeeForMenu) {
+      deleteEmployee(selectedEmployeeForMenu.id);
+    }
+  };
+
+  const loadStatistics = async () => {
+    try {
+      const journalData = await AsyncStorage.getItem("journal_entries");
+      if (!journalData) {
+        setStatistics({});
+        return;
+      }
+
+      const entries = JSON.parse(journalData);
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      const stats: Record<string, { zastepca: number; nieobecny: number }> = {};
+
+      entries.forEach((entry: any) => {
+        const entryDate = new Date(entry.date);
+        if (entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear) {
+          if (entry.substituteEmployee && entry.substituteEmployee.trim()) {
+            if (!stats[entry.substituteEmployee]) {
+              stats[entry.substituteEmployee] = { zastepca: 0, nieobecny: 0 };
+            }
+            stats[entry.substituteEmployee].zastepca++;
+          }
+
+          if (entry.absentEmployee && entry.absentEmployee.trim()) {
+            if (!stats[entry.absentEmployee]) {
+              stats[entry.absentEmployee] = { zastepca: 0, nieobecny: 0 };
+            }
+            stats[entry.absentEmployee].nieobecny++;
+          }
+        }
+      });
+
+      setStatistics(stats);
+    } catch (error) {
+      console.error("Error loading statistics:", error);
+    }
+  };
+
+  const getEmployeeStats = (employeeName: string) => {
+    return statistics[employeeName] || { zastepca: 0, nieobecny: 0 };
+  };
+
   const renderEmployee = ({ item }: { item: Employee }) => (
-    <View style={[styles.employeeCard, { backgroundColor: surfaceColor }]}>
+    <Pressable
+      onLongPress={() => {
+        setSelectedEmployeeForMenu(item);
+        setShowContextMenu(true);
+      }}
+      delayLongPress={500}
+      style={({ pressed }) => [styles.employeeCard, { backgroundColor: surfaceColor }, pressed && { opacity: 0.7 }]}
+    >
       <View style={styles.employeeInfo}>
         <Text style={[styles.employeeName, { color: textColor }]}>{item.name}</Text>
         <View style={styles.departmentBadge}>
@@ -172,20 +248,30 @@ export default function EmployeesScreen() {
         )}
       </View>
       <View style={styles.actionButtons}>
-        <Pressable
-          style={({ pressed }) => [styles.editBtn, pressed && styles.editBtnPressed]}
-          onPress={() => startEdit(item)}
-        >
-          <Ionicons name="pencil-outline" size={20} color={accentColor} />
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
-          onPress={() => deleteEmployee(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-        </Pressable>
+        {(() => {
+          const stats = getEmployeeStats(item.name);
+          if (stats.zastepca === 0 && stats.nieobecny === 0) {
+            return null;
+          }
+          return (
+            <View style={styles.statsContainer}>
+              {stats.zastepca > 0 && (
+                <View style={styles.statItem}>
+                  <Text style={styles.greenTriangle}>▲</Text>
+                  <Text style={styles.statNumber}>{stats.zastepca}</Text>
+                </View>
+              )}
+              {stats.nieobecny > 0 && (
+                <View style={styles.statItem}>
+                  <Text style={styles.redTriangle}>▼</Text>
+                  <Text style={styles.statNumber}>{stats.nieobecny}</Text>
+                </View>
+              )}
+            </View>
+          );
+        })()}
       </View>
-    </View>
+    </Pressable>
   );
 
   return (
@@ -383,6 +469,36 @@ export default function EmployeesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Context Menu Modal */}
+      <Modal
+        visible={showContextMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowContextMenu(false)}
+      >
+        <Pressable
+          style={styles.contextMenuOverlay}
+          onPress={() => setShowContextMenu(false)}
+        >
+          <View style={[styles.contextMenu, { backgroundColor: surfaceColor }]}>
+            <Pressable
+              style={({ pressed }) => [styles.contextMenuItem, pressed && styles.contextMenuItemPressed]}
+              onPress={handleEditFromMenu}
+            >
+              <Ionicons name="pencil-outline" size={20} color={accentColor} />
+              <Text style={[styles.contextMenuText, { color: textColor }]}>Edytuj</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.contextMenuItem, pressed && styles.contextMenuItemPressed]}
+              onPress={handleDeleteFromMenu}
+            >
+              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+              <Text style={[styles.contextMenuText, { color: "#FF3B30" }]}>Usuń</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -456,6 +572,11 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: "row",
     gap: 8,
+    alignItems: "center",
+  },
+  hintText: {
+    fontSize: 12,
+    fontStyle: "italic",
   },
   editBtn: {
     padding: 8,
@@ -545,5 +666,60 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  contextMenuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  contextMenu: {
+    borderRadius: 12,
+    paddingVertical: 8,
+    minWidth: 150,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  contextMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  contextMenuItemPressed: {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  contextMenuText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  statsContainer: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  statItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  greenTriangle: {
+    fontSize: 16,
+    color: "#4CAF50",
+    fontWeight: "bold",
+  },
+  redTriangle: {
+    fontSize: 16,
+    color: "#FF3B30",
+    fontWeight: "bold",
+  },
+  statNumber: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#A0A0A0",
   },
 });
