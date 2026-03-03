@@ -34,12 +34,14 @@ export function CustomSplashScreen({ onComplete }: CustomSplashScreenProps) {
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      <Image
-        source={require("@/assets/images/header-combined.png")}
-        style={styles.logo}
-        resizeMode="contain"
-        onLoad={() => setImageLoaded(true)}
-      />
+      <View style={styles.logoContainer}>
+        <Image
+          source={require("@/assets/images/header-combined.png")}
+          style={styles.logo}
+          resizeMode="contain"
+          onLoad={() => setImageLoaded(true)}
+        />
+      </View>
     </Animated.View>
   );
 }
@@ -48,6 +50,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0B1929",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoContainer: {
+    width: 280,
+    height: 140,
     justifyContent: "center",
     alignItems: "center",
   },

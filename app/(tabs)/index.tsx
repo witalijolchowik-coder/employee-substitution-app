@@ -240,6 +240,7 @@ export default function HomeScreen() {
 
   // UI state
   const [showAgencyField, setShowAgencyField] = useState(false);
+  const [statistics, setStatistics] = useState<Record<string, { zastepca: number; nieobecny: number }>>({});
 
   // Load cached data on mount and subscribe to employee list changes
   useEffect(() => {
@@ -250,6 +251,57 @@ export default function HomeScreen() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Load statistics every second
+  useEffect(() => {
+    loadStatistics();
+    const interval = setInterval(() => {
+      loadStatistics();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [employees]);
+
+  const loadStatistics = async () => {
+    try {
+      const journalEntries = await AsyncStorage.getItem("journal_entries") || "[]";
+      const entries = JSON.parse(journalEntries);
+      
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      const stats: Record<string, { zastepca: number; nieobecny: number }> = {};
+      
+      entries.forEach((entry: any) => {
+        const entryDate = new Date(entry.timestamp);
+        if (entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear) {
+          if (entry.substituteEmployee && !entry.agency) {
+            const isInList = employees.includes(entry.substituteEmployee);
+            if (isInList) {
+              if (!stats[entry.substituteEmployee]) {
+                stats[entry.substituteEmployee] = { zastepca: 0, nieobecny: 0 };
+              }
+              stats[entry.substituteEmployee].zastepca++;
+            }
+          }
+          
+          if (entry.absentEmployee) {
+            const isInList = employees.includes(entry.absentEmployee);
+            if (isInList) {
+              if (!stats[entry.absentEmployee]) {
+                stats[entry.absentEmployee] = { zastepca: 0, nieobecny: 0 };
+              }
+              stats[entry.absentEmployee].nieobecny++;
+            }
+          }
+        }
+      });
+      
+      setStatistics(stats);
+    } catch (error) {
+      console.error("[Statistics] Error loading statistics:", error);
+    }
+  };
 
   // Check if substitute is from external agency and auto-select department
   useEffect(() => {
@@ -314,55 +366,13 @@ export default function HomeScreen() {
         console.log("[Cache] Loaded agencies from cache:", parsed.length, "items");
         setAgencies(parsed);
       } else {
-        console.log("[Cache] No cached agencies, using fallback");
+        console.log("[Cache] No agencies in cache, using fallback");
         setAgencies(FALLBACK_AGENCIES);
       }
     } catch (error) {
       console.error("[Cache] Error loading cached data:", error);
-      setEmployees(FALLBACK_EMPLOYEES);
-      setAgencies(FALLBACK_AGENCIES);
-      const fallbackObjs = FALLBACK_EMPLOYEES.map((name, idx) => ({id: `emp_${idx}`, name, department: "Outbound", isExternal: false}));
-      setEmployeeObjects(fallbackObjs);
     }
   };
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      console.log("[Fetch] Starting data sync from Gist...");
-
-      // Fetch employees
-      const employeesResponse = await fetch(EMPLOYEES_URL);
-      if (!employeesResponse.ok) {
-        throw new Error(`Employees fetch failed: ${employeesResponse.status}`);
-      }
-      const employeesData = await employeesResponse.json();
-      console.log("[Fetch] Employees loaded from Gist:", employeesData.length, "items");
-      setEmployees(employeesData);
-      await AsyncStorage.setItem("employee_list_cache", JSON.stringify(employeesData));
-      console.log("[Fetch] Employees saved to cache");
-
-      // Fetch agencies
-      const agenciesResponse = await fetch(AGENCIES_URL);
-      if (!agenciesResponse.ok) {
-        throw new Error(`Agencies fetch failed: ${agenciesResponse.status}`);
-      }
-      const agenciesData = await agenciesResponse.json();
-      console.log("[Fetch] Agencies loaded from Gist:", agenciesData.length, "items");
-      setAgencies(agenciesData);
-      await AsyncStorage.setItem("agency_list_cache", JSON.stringify(agenciesData));
-      console.log("[Fetch] Agencies saved to cache");
-
-      console.log("[Fetch] Data sync completed successfully");
-    } catch (error) {
-      console.error("[Fetch] Error fetching data:", error);
-      // Keep fallback or cached data
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Removed handleRefresh - employees now sync from local employees_list only
 
   const formatDate = (date: Date): string => {
     const day = String(date.getDate()).padStart(2, "0");
@@ -372,32 +382,23 @@ export default function HomeScreen() {
   };
 
   const handleSendEmail = async () => {
-    // Validate required fields
-    if (!absentEmployee || !shift || !substituteEmployee) {
+    if (!absentEmployee || !substituteEmployee) {
       alert("Proszę wypełnić wszystkie pola");
       return;
     }
 
-    if (showAgencyField && !selectedAgency) {
-      alert("Proszę wybrać agencję");
-      return;
-    }
-
-    // Build email
     const formattedDate = formatDate(date);
-    const subject = `Informacje o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
+    const subject = `Zastępstwo - ${formattedDate}`;
 
-    // Build substitute name with agency if applicable
-    let substituteName = substituteEmployee;
+    // Get agency email if applicable
     let agencyEmail = "";
-
     if (showAgencyField && selectedAgency) {
       const agency = agencies.find((a) => a.name === selectedAgency);
-      if (agency) {
-        substituteName = `${substituteEmployee} (${agency.name})`;
-        agencyEmail = agency.email;
-      }
+      agencyEmail = agency?.email || "";
     }
+
+    // Determine substitute name
+    const substituteName = substituteEmployee;
 
     // Build email body with selected reason
     const body = `Dzień dobry,  
@@ -505,6 +506,36 @@ Pozdrawiam, `;
             resizeMode="contain"
           />
         </View>
+
+        {/* Monthly Statistics */}
+        {Object.keys(statistics).length > 0 && (
+          <View style={[styles.statisticsSection, { backgroundColor: surfaceColor }]}>
+            <Text style={[styles.statisticsTitle, { color: accentColor }]}>Statystyka miesiaca</Text>
+            <View style={styles.statisticsGrid}>
+              {Object.entries(statistics).map(([name, stats]) => (
+                stats.zastepca > 0 || stats.nieobecny > 0 ? (
+                  <View key={name} style={styles.statisticsRow}>
+                    <Text style={[styles.statisticsName, { color: textColor }]}>{name}</Text>
+                    <View style={styles.statisticsValues}>
+                      {stats.zastepca > 0 && (
+                        <View style={styles.statItem}>
+                          <Text style={styles.greenTriangle}>▲</Text>
+                          <Text style={[styles.statNumber, { color: "#4CAF50" }]}>{stats.zastepca}</Text>
+                        </View>
+                      )}
+                      {stats.nieobecny > 0 && (
+                        <View style={styles.statItem}>
+                          <Text style={styles.redTriangle}>▼</Text>
+                          <Text style={[styles.statNumber, { color: "#FF3B30" }]}>{stats.nieobecny}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                ) : null
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Form */}
         <View style={styles.form}>
@@ -682,22 +713,14 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   headerSection: {
     paddingVertical: 16,
     marginBottom: 0,
-    borderRadius: 12,
-  },
-  headerCombined: {
-    width: "90%",
-    height: 160,
-    marginBottom: 24,
-    alignSelf: "center",
-  },
-  logoContainer: {
     alignItems: "center",
     paddingVertical: 12,
     marginBottom: 8,
@@ -728,12 +751,13 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: -8,
     marginBottom: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
   },
   section: {
     borderRadius: 12,
     padding: 16,
     gap: 12,
+    backgroundColor: "#1A2F47",
   },
   sectionTitle: {
     fontSize: 16,
@@ -852,7 +876,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   sendButtonContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingBottom: 16,
   },
   sendButtonPressed: {
@@ -904,5 +928,56 @@ const styles = StyleSheet.create({
   },
   segmentButtonTextActive: {
     color: "#FFFFFF",
+  },
+  statisticsSection: {
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    marginBottom: 12,
+  },
+  statisticsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  statisticsGrid: {
+    gap: 8,
+  },
+  statisticsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statisticsName: {
+    fontSize: 14,
+    fontWeight: "500",
+    flex: 1,
+  },
+  statisticsValues: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  statItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  greenTriangle: {
+    color: "#4CAF50",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  redTriangle: {
+    color: "#FF3B30",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  statNumber: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  headerCombined: {
+    width: "90%",
+    height: 160,
   },
 });
