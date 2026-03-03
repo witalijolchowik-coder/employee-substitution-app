@@ -275,7 +275,8 @@ export default function HomeScreen() {
       entries.forEach((entry: any) => {
         const entryDate = new Date(entry.timestamp);
         if (entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear) {
-          if (entry.substituteEmployee && !entry.agency) {
+          // Count substitute employee if they are in our employee list (regardless of who is absent)
+          if (entry.substituteEmployee) {
             const isInList = employees.includes(entry.substituteEmployee);
             if (isInList) {
               if (!stats[entry.substituteEmployee]) {
@@ -285,6 +286,7 @@ export default function HomeScreen() {
             }
           }
           
+          // Count absent employee if they are in our employee list (regardless of who is substitute)
           if (entry.absentEmployee) {
             const isInList = employees.includes(entry.absentEmployee);
             if (isInList) {
@@ -751,13 +753,14 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: -8,
     marginBottom: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
   },
   section: {
     borderRadius: 12,
     padding: 16,
     gap: 12,
     backgroundColor: "#1A2F47",
+    marginHorizontal: 16,
   },
   sectionTitle: {
     fontSize: 16,
@@ -934,6 +937,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     marginBottom: 12,
+    marginHorizontal: 16,
   },
   statisticsTitle: {
     fontSize: 16,

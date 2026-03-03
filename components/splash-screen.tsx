@@ -12,21 +12,17 @@ interface CustomSplashScreenProps {
 
 export function CustomSplashScreen({ onComplete }: CustomSplashScreenProps) {
   const opacity = useSharedValue(1);
-  const [imageLoaded, setImageLoaded] = React.useState(false);
 
   useEffect(() => {
-    // Only start fade out after image is loaded
-    if (!imageLoaded) return;
-
-    // Fade out after 1.2 seconds (1000ms splash + 200ms delay before fade)
+    // Fade out after 1.5 seconds (fixed delay, no waiting for image load)
     const timer = setTimeout(() => {
       opacity.value = withTiming(0, { duration: 300 }, () => {
         onComplete?.();
       });
-    }, 1200);
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [opacity, onComplete, imageLoaded]);
+  }, [opacity, onComplete]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -39,7 +35,6 @@ export function CustomSplashScreen({ onComplete }: CustomSplashScreenProps) {
           source={require("@/assets/images/header-combined.png")}
           style={styles.logo}
           resizeMode="contain"
-          onLoad={() => setImageLoaded(true)}
         />
       </View>
     </Animated.View>
@@ -58,6 +53,7 @@ const styles = StyleSheet.create({
     height: 140,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   logo: {
     width: 280,
