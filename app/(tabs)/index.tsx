@@ -754,6 +754,7 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 12,
     paddingHorizontal: 0,
+    marginHorizontal: 16,
   },
   section: {
     borderRadius: 12,
@@ -781,7 +782,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: "#3A4A5C",
   },
   autocompleteContainer: {
     position: "relative",
@@ -796,7 +797,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 0,
     maxHeight: 200,
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: "#3A4A5C",
     borderTopWidth: 0,
   },
   dropdownItem: {
@@ -817,7 +818,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: "#3A4A5C",
   },
   toggleButtonActive: {
     borderColor: "#2196F3",
@@ -838,6 +839,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+    borderColor: "#3A4A5C",
   },
   reasonButtonActive: {
     borderColor: "#2196F3",
@@ -920,7 +922,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#2C2C2C",
+    borderColor: "#3A4A5C",
   },
   segmentButtonActive: {
     borderColor: "#2196F3",

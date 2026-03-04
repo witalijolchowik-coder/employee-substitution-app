@@ -14,12 +14,12 @@ export function CustomSplashScreen({ onComplete }: CustomSplashScreenProps) {
   const opacity = useSharedValue(1);
 
   useEffect(() => {
-    // Fade out after 1.5 seconds (fixed delay, no waiting for image load)
+    // Fade out after 2 seconds (fixed delay)
     const timer = setTimeout(() => {
       opacity.value = withTiming(0, { duration: 300 }, () => {
         onComplete?.();
       });
-    }, 1500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [opacity, onComplete]);
@@ -30,13 +30,11 @@ export function CustomSplashScreen({ onComplete }: CustomSplashScreenProps) {
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      <View style={styles.logoContainer}>
-        <Image
-          source={require("@/assets/images/header-combined.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
+      <Image
+        source={require("@/assets/images/header-combined.png")}
+        style={styles.logo}
+        resizeMode="contain"
+      />
     </Animated.View>
   );
 }
@@ -47,13 +45,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#0B1929",
     justifyContent: "center",
     alignItems: "center",
-  },
-  logoContainer: {
-    width: 280,
-    height: 140,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
   },
   logo: {
     width: 280,
