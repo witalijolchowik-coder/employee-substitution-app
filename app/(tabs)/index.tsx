@@ -715,10 +715,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 16,
   },
   scrollContent: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 16,
   },
   headerSection: {
     paddingVertical: 16,
@@ -754,14 +753,12 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 12,
     paddingHorizontal: 0,
-    marginHorizontal: 16,
   },
   section: {
     borderRadius: 12,
     padding: 16,
     gap: 12,
     backgroundColor: "#1A2F47",
-    marginHorizontal: 16,
   },
   sectionTitle: {
     fontSize: 16,

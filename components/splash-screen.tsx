@@ -1,41 +1,28 @@
 import React, { useEffect } from "react";
 import { View, Image, StyleSheet } from "react-native";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
 
 interface CustomSplashScreenProps {
   onComplete?: () => void;
 }
 
 export function CustomSplashScreen({ onComplete }: CustomSplashScreenProps) {
-  const opacity = useSharedValue(1);
-
   useEffect(() => {
-    // Fade out after 2 seconds (fixed delay)
+    // Simple timeout - no animations, no state changes
     const timer = setTimeout(() => {
-      opacity.value = withTiming(0, { duration: 300 }, () => {
-        onComplete?.();
-      });
+      onComplete?.();
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [opacity, onComplete]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
+  }, [onComplete]);
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <View style={styles.container}>
       <Image
         source={require("@/assets/images/header-combined.png")}
         style={styles.logo}
         resizeMode="contain"
       />
-    </Animated.View>
+    </View>
   );
 }
 
