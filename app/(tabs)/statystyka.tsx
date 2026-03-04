@@ -141,7 +141,6 @@ export default function StatystykaScreen() {
                           <Text style={[styles.statNumber, { color: "#4CAF50" }]}>
                             {stats.zastepca}
                           </Text>
-                          <Text style={[styles.statLabel, { color: labelColor }]}>zastępca</Text>
                         </View>
                       )}
                       {stats.nieobecny > 0 && (
@@ -150,7 +149,6 @@ export default function StatystykaScreen() {
                           <Text style={[styles.statNumber, { color: "#FF3B30" }]}>
                             {stats.nieobecny}
                           </Text>
-                          <Text style={[styles.statLabel, { color: labelColor }]}>nieobecny</Text>
                         </View>
                       )}
                     </View>

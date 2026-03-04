@@ -575,11 +575,11 @@ Pozdrawiam, `;
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={(event: any, selectedDate?: Date) => {
-                  if (Platform.OS !== "ios") {
-                    setShowDatePicker(false);
-                  }
                   if (selectedDate) {
                     setDate(selectedDate);
+                  }
+                  if (Platform.OS !== "ios") {
+                    setShowDatePicker(false);
                   }
                 }}
               />
