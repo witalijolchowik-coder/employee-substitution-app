@@ -485,6 +485,17 @@ Pozdrawiam, `;
       console.error("Error opening email client:", err);
       alert("Nie można otworzyć klienta poczty");
     });
+
+    // Clear form after sending
+    setAbsentEmployee("");
+    setAbsentDepartment("Outbound");
+    setAbsentReason("sprawy prywatne");
+    setShift("D");
+    setSubstituteEmployee("");
+    setSubstituteDepartment("Outbound");
+    setSelectedAgency("");
+    setDate(new Date());
+    setShowAgencyField(false);
   };
 
   return (
@@ -509,35 +520,7 @@ Pozdrawiam, `;
           />
         </View>
 
-        {/* Monthly Statistics */}
-        {Object.keys(statistics).length > 0 && (
-          <View style={[styles.statisticsSection, { backgroundColor: surfaceColor }]}>
-            <Text style={[styles.statisticsTitle, { color: accentColor }]}>Statystyka miesiaca</Text>
-            <View style={styles.statisticsGrid}>
-              {Object.entries(statistics).map(([name, stats]) => (
-                stats.zastepca > 0 || stats.nieobecny > 0 ? (
-                  <View key={name} style={styles.statisticsRow}>
-                    <Text style={[styles.statisticsName, { color: textColor }]}>{name}</Text>
-                    <View style={styles.statisticsValues}>
-                      {stats.zastepca > 0 && (
-                        <View style={styles.statItem}>
-                          <Text style={styles.greenTriangle}>▲</Text>
-                          <Text style={[styles.statNumber, { color: "#4CAF50" }]}>{stats.zastepca}</Text>
-                        </View>
-                      )}
-                      {stats.nieobecny > 0 && (
-                        <View style={styles.statItem}>
-                          <Text style={styles.redTriangle}>▼</Text>
-                          <Text style={[styles.statNumber, { color: "#FF3B30" }]}>{stats.nieobecny}</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                ) : null
-              ))}
-            </View>
-          </View>
-        )}
+        {/* Statistics moved to Statystyka tab */}
 
         {/* Form */}
         <View style={styles.form}>
@@ -592,7 +575,9 @@ Pozdrawiam, `;
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={(event: any, selectedDate?: Date) => {
-                  setShowDatePicker(Platform.OS === "ios");
+                  if (Platform.OS !== "ios") {
+                    setShowDatePicker(false);
+                  }
                   if (selectedDate) {
                     setDate(selectedDate);
                   }

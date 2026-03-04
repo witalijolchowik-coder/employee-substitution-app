@@ -21,6 +21,7 @@ const MAPPING: IconMapping = {
   "list.bullet": "list",
   "person.fill": "person",
   "description.fill": "insert-drive-file",
+  "chart.bar.fill": "bar-chart",
 };
 
 /**
