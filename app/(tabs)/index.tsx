@@ -18,7 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -237,6 +237,7 @@ export default function HomeScreen() {
   const [selectedAgency, setSelectedAgency] = useState("");
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef<Date | null>(null);
 
   // UI state
   const [showAgencyField, setShowAgencyField] = useState(false);
@@ -576,7 +577,11 @@ Pozdrawiam, `;
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={(event: any, selectedDate?: Date) => {
                   if (selectedDate) {
-                    setDate(selectedDate);
+                    // Only update if date actually changed from what we last set
+                    if (!datePickerRef.current || datePickerRef.current.getTime() !== selectedDate.getTime()) {
+                      datePickerRef.current = new Date(selectedDate);
+                      setDate(selectedDate);
+                    }
                   }
                   if (Platform.OS !== "ios") {
                     setShowDatePicker(false);
