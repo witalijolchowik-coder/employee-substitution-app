@@ -391,7 +391,7 @@ export default function HomeScreen() {
     }
 
     const formattedDate = formatDate(date);
-    const subject = `Zastępstwo - ${formattedDate}`;
+    const subject = `Informuję o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
 
     // Get agency email if applicable
     let agencyEmail = "";
@@ -404,11 +404,13 @@ export default function HomeScreen() {
     const substituteName = substituteEmployee;
 
     // Build email body with selected reason
-    const body = `Dzień dobry,  
+    const substituteAgency = selectedAgency ? `(${selectedAgency})` : "";
+    const body = `Dzień dobry,
 
-W dniu ${formattedDate} proszę o udzielenie dnia wolnego dla ${absentEmployee}, dział ${absentDepartment} – powód: ${absentReason}. Na zastępstwo przyjdzie do pracy ${substituteName}, dział ${substituteDepartment}. 
+W dniu ${formattedDate} proszę o udzielenie dnia wolnego dla ${absentEmployee}, dział ${absentDepartment} – powód: ${absentReason}.
+Na zastępstwo przyjdzie do pracy ${substituteName} ${substituteAgency} dział ${substituteDepartment}
 
-Pozdrawiam, `;
+Pozdrawiam,`;
 
     // Build recipient lists
     const toRecipients = [

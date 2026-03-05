@@ -230,6 +230,12 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     marginBottom: 20,
+    backgroundColor: "#0B1929",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    marginHorizontal: -16,
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: 28,
@@ -241,15 +247,16 @@ const styles = StyleSheet.create({
   },
   entryCard: {
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     borderLeftWidth: 4,
     position: "relative",
+    marginBottom: 8,
   },
   entryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 16,
+    marginBottom: 8,
   },
   headerLeft: {
     flex: 1,
@@ -274,7 +281,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   entryContent: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   section: {
     gap: 8,

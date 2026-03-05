@@ -26,6 +26,7 @@ interface Employee {
   department: string;
   agency?: string; // For external employees
   isExternal: boolean;
+  employmentDate?: string; // Format: DD.MM.YYYY
 }
 
 const DEPARTMENTS = ["Outbound", "Inbound"];
@@ -63,6 +64,7 @@ export default function EmployeesScreen() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newEmployeeName, setNewEmployeeName] = useState("");
   const [newEmployeeDepartment, setNewEmployeeDepartment] = useState("Outbound");
+  const [newEmployeeDate, setNewEmployeeDate] = useState("");
   const [selectedEmployeeForMenu, setSelectedEmployeeForMenu] = useState<Employee | null>(null);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [statistics, setStatistics] = useState<Record<string, { zastepca: number; nieobecny: number }>>({});
@@ -530,9 +532,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
   },
-  headerSection: {
-    marginBottom: 20,
-  },
+
   headerTitle: {
     fontSize: 28,
     fontWeight: "700",
@@ -738,5 +738,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#A0A0A0",
+  },
+  headerSection: {
+    backgroundColor: "#0B1929",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    marginHorizontal: -16,
+    zIndex: 10,
+  },
+  floatingButton: {
+    position: "absolute",
+    bottom: 32,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#2196F3",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
