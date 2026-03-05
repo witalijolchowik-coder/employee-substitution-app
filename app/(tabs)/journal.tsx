@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerSection: {
-    marginBottom: 20,
+    marginBottom: 4,
     backgroundColor: "#0B1929",
     paddingHorizontal: 16,
     paddingTop: 12,

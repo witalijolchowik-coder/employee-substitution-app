@@ -518,6 +518,17 @@ export default function EmployeesScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      {/* Floating Add Button */}
+      <Pressable
+        onPress={() => setShowAddModal(true)}
+        style={({ pressed }) => [
+          styles.floatingButton,
+          pressed && { opacity: 0.8 },
+        ]}
+      >
+        <Ionicons name="add" size={28} color="#FFF" />
+      </Pressable>
     </View>
   );
 }

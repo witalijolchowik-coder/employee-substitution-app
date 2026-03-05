@@ -237,8 +237,7 @@ export default function HomeScreen() {
   const [selectedAgency, setSelectedAgency] = useState("");
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const datePickerRef = useRef<Date | null>(null);
-
+  
   // UI state
   const [showAgencyField, setShowAgencyField] = useState(false);
   const [statistics, setStatistics] = useState<Record<string, { zastepca: number; nieobecny: number }>>({});
@@ -579,11 +578,7 @@ Pozdrawiam,`;
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={(event: any, selectedDate?: Date) => {
                   if (selectedDate) {
-                    // Only update if date actually changed from what we last set
-                    if (!datePickerRef.current || datePickerRef.current.getTime() !== selectedDate.getTime()) {
-                      datePickerRef.current = new Date(selectedDate);
-                      setDate(selectedDate);
-                    }
+                    setDate(selectedDate);
                   }
                   if (Platform.OS !== "ios") {
                     setShowDatePicker(false);
