@@ -640,7 +640,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 16,
+    maxHeight: "85%",
+    minHeight: "50%",
   },
   modalHeader: {
     flexDirection: "row",
@@ -653,8 +655,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   modalForm: {
-    gap: 16,
-    marginBottom: 20,
+    gap: 12,
+    paddingBottom: 20,
   },
   formField: {
     gap: 8,
@@ -678,6 +680,8 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: "row",
     gap: 12,
+    marginTop: 20,
+    paddingBottom: 10,
   },
   cancelButton: {
     flex: 1,
