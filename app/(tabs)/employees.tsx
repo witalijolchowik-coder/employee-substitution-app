@@ -24,9 +24,9 @@ interface Employee {
   id: string;
   name: string;
   department: string;
+  employmentDate?: string; // Format: DD.MM.YYYY
   agency?: string; // For external employees
   isExternal: boolean;
-  employmentDate?: string; // Format: DD.MM.YYYY
 }
 
 const DEPARTMENTS = ["Outbound", "Inbound"];
@@ -384,6 +384,20 @@ export default function EmployeesScreen() {
                 </View>
               </View>
 
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { color: labelColor }]}>Data zatrudnienia</Text>
+                <TextInput
+                  style={[
+                    styles.formInput,
+                    { color: textColor, backgroundColor: backgroundColor, borderColor: accentColor },
+                  ]}
+                  placeholder="DD.MM.YYYY"
+                  placeholderTextColor={labelColor}
+                  value={newEmployeeDate}
+                  onChangeText={setNewEmployeeDate}
+                />
+              </View>
+
               <View style={styles.modalButtons}>
                 <Pressable
                   style={({ pressed }) => [
@@ -542,6 +556,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
+    paddingTop: 12,
   },
 
   headerTitle: {

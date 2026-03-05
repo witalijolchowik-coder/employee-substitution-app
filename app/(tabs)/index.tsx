@@ -579,9 +579,9 @@ Pozdrawiam,`;
                 onChange={(event: any, selectedDate?: Date) => {
                   if (selectedDate) {
                     setDate(selectedDate);
-                  }
-                  if (Platform.OS !== "ios") {
-                    setShowDatePicker(false);
+                    if (Platform.OS !== "ios") {
+                      setShowDatePicker(false);
+                    }
                   }
                 }}
               />

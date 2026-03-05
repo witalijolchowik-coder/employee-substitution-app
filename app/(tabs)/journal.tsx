@@ -227,6 +227,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
+    paddingTop: 12,
   },
   headerSection: {
     marginBottom: 4,
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
   },
   entryCard: {
     borderRadius: 12,
-    padding: 12,
+    padding: 6,
     borderLeftWidth: 4,
     position: "relative",
     marginBottom: 8,
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
   },
   shiftBadge: {
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: 6,
     alignSelf: "flex-start",
   },
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 60,
-    gap: 12,
+    gap: 6,
   },
   emptyText: {
     fontSize: 16,
