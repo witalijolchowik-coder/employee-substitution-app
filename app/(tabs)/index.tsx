@@ -316,10 +316,8 @@ export default function HomeScreen() {
       if (selectedEmp) {
         setSubstituteDepartment(selectedEmp.department || "Outbound");
       }
-    } else if (substituteEmployee.length > 0) {
-      // External agency employees default to Outbound
-      setSubstituteDepartment("Outbound");
     }
+    // External agency employees can freely choose department - no auto-select
   }, [substituteEmployee, employees, employeeObjects]);
 
   // Auto-select department for absent employee
@@ -577,11 +575,15 @@ Pozdrawiam,`;
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={(event: any, selectedDate?: Date) => {
+                  if (event.type === 'dismissed') {
+                    setShowDatePicker(false);
+                    return;
+                  }
                   if (selectedDate) {
                     setDate(selectedDate);
-                    if (Platform.OS !== "ios") {
-                      setShowDatePicker(false);
-                    }
+                  }
+                  if (Platform.OS !== "ios") {
+                    setShowDatePicker(false);
                   }
                 }}
               />
