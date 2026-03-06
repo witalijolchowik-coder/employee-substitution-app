@@ -574,28 +574,31 @@ Pozdrawiam,`;
                 value={date}
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={useCallback((event: any, selectedDate?: Date) => {
+                onChange={(event: any, selectedDate?: Date) => {
                   if (Platform.OS === "android") {
                     // Android: close picker immediately
                     setShowDatePicker(false);
                     // Only update date if user selected (not cancelled)
                     if (event.type === "set" && selectedDate) {
-                      // Ensure we're setting a valid date
-                      const newDate = new Date(selectedDate);
-                      if (!isNaN(newDate.getTime())) {
-                        setDate(newDate);
+                      // Compare dates to avoid duplicate updates
+                      const selectedTime = new Date(selectedDate).setHours(0, 0, 0, 0);
+                      const currentTime = date.setHours(0, 0, 0, 0);
+                      if (selectedTime !== currentTime) {
+                        setDate(selectedDate);
                       }
                     }
                   } else {
                     // iOS: keep picker open until user confirms
                     if (selectedDate) {
-                      const newDate = new Date(selectedDate);
-                      if (!isNaN(newDate.getTime())) {
-                        setDate(newDate);
+                      // Compare dates to avoid duplicate updates
+                      const selectedTime = new Date(selectedDate).setHours(0, 0, 0, 0);
+                      const currentTime = date.setHours(0, 0, 0, 0);
+                      if (selectedTime !== currentTime) {
+                        setDate(selectedDate);
                       }
                     }
                   }
-                }, [])}
+                }}
               />
             )}
 
