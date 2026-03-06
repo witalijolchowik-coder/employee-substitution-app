@@ -575,15 +575,15 @@ Pozdrawiam,`;
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
                 onChange={(event: any, selectedDate?: Date) => {
-                  if (event.type === 'dismissed') {
+                  if (Platform.OS === "android") {
                     setShowDatePicker(false);
-                    return;
-                  }
-                  if (selectedDate) {
-                    setDate(selectedDate);
-                  }
-                  if (Platform.OS !== "ios") {
-                    setShowDatePicker(false);
+                    if (event.type === "set" && selectedDate) {
+                      setDate(selectedDate);
+                    }
+                  } else {
+                    if (selectedDate) {
+                      setDate(selectedDate);
+                    }
                   }
                 }}
               />
