@@ -270,21 +270,33 @@ export default function HomeScreen() {
   useEffect(() => {
     loadCachedData();
     loadSelectedDate();
-    // Set up interval to check for employee list updates
+  }, []);
+
+  useEffect(() => {
+    if (showDatePicker) {
+      return;
+    }
+
     const interval = setInterval(() => {
       loadCachedData();
     }, 1000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [showDatePicker]);
 
   // Load statistics every second
   useEffect(() => {
+    if (showDatePicker) {
+      return;
+    }
+
     loadStatistics();
     const interval = setInterval(() => {
       loadStatistics();
     }, 1000);
+
     return () => clearInterval(interval);
-  }, [employees]);
+  }, [employees, showDatePicker]);
 
   const loadStatistics = async () => {
     try {

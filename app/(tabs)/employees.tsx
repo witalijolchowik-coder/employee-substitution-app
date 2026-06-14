@@ -65,8 +65,6 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newEmployeeName, setNewEmployeeName] = useState("");
   const [newEmployeeDepartment, setNewEmployeeDepartment] = useState("Outbound");
-  const [selectedEmployeeForMenu, setSelectedEmployeeForMenu] = useState<Employee | null>(null);
-  const [showContextMenu, setShowContextMenu] = useState(false);
   const [statistics, setStatistics] = useState<Record<string, { zastepca: number; nieobecny: number }>>({});
 
   useEffect(() => {
@@ -131,6 +129,13 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
     setShowAddModal(false);
   };
 
+  const openAddModal = () => {
+    setNewEmployeeName("");
+    setNewEmployeeDepartment("Outbound");
+    setEditingEmployee(null);
+    setShowAddModal(true);
+  };
+
   const detectCsvDelimiter = (line: string) => {
     const delimiters = [",", ";", "\t"];
     let bestDelimiter = ",";
@@ -182,6 +187,17 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
     return cells.map((cell) => cell.replace(/^\uFEFF/, ""));
   };
 
+  const normalizeCsvDepartment = (value?: string) => {
+    const normalized = value?.trim().toLowerCase();
+    if (normalized === "inbound") {
+      return "Inbound";
+    }
+    if (normalized === "outbound") {
+      return "Outbound";
+    }
+    return "Outbound";
+  };
+
   const importEmployeesFromCsv = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -210,7 +226,7 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
       const importedEmployees: Employee[] = [];
 
       lines.forEach((line, index) => {
-        const [firstName, lastName] = parseCsvLine(line, delimiter);
+        const [firstName, lastName, department] = parseCsvLine(line, delimiter);
         const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
         const normalizedName = fullName.toLowerCase();
 
@@ -222,7 +238,7 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
         importedEmployees.push({
           id: `emp_csv_${Date.now()}_${index}`,
           name: fullName,
-          department: "Outbound",
+          department: normalizeCsvDepartment(department),
           isExternal: false,
         });
       });
@@ -281,25 +297,11 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
             const updated = employees.filter((e) => e.id !== id);
             setEmployees(updated);
             await AsyncStorage.setItem("employees_list", JSON.stringify(updated));
-            setShowContextMenu(false);
           },
           style: "destructive",
         },
       ]
     );
-  };
-
-  const handleEditFromMenu = () => {
-    if (selectedEmployeeForMenu) {
-      startEdit(selectedEmployeeForMenu);
-      setShowContextMenu(false);
-    }
-  };
-
-  const handleDeleteFromMenu = () => {
-    if (selectedEmployeeForMenu) {
-      deleteEmployee(selectedEmployeeForMenu.id);
-    }
   };
 
   const loadStatistics = async () => {
@@ -354,11 +356,6 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
 
   const renderEmployee = ({ item }: { item: Employee }) => (
     <Pressable
-      onLongPress={() => {
-        setSelectedEmployeeForMenu(item);
-        setShowContextMenu(true);
-      }}
-      delayLongPress={500}
       style={({ pressed }) => [styles.employeeCard, { backgroundColor: surfaceColor }, pressed && { opacity: 0.7 }]}
     >
       <View style={styles.employeeInfo}>
@@ -393,6 +390,12 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
             </View>
           );
         })()}
+        <Pressable style={styles.iconButton} onPress={() => startEdit(item)}>
+          <Ionicons name="pencil-outline" size={20} color={accentColor} />
+        </Pressable>
+        <Pressable style={styles.iconButton} onPress={() => deleteEmployee(item.id)}>
+          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+        </Pressable>
       </View>
     </Pressable>
   );
@@ -425,7 +428,7 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
               styles.toolbarButton,
               { backgroundColor: accentColor, opacity: pressed ? 0.8 : 1 },
             ]}
-            onPress={() => setShowAddModal(true)}
+            onPress={openAddModal}
           >
             <Ionicons name="add" size={22} color="#FFF" />
             <Text style={styles.addButtonText}>Dodaj</Text>
@@ -615,39 +618,9 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Context Menu Modal */}
-      <Modal
-        visible={showContextMenu}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowContextMenu(false)}
-      >
-        <Pressable
-          style={styles.contextMenuOverlay}
-          onPress={() => setShowContextMenu(false)}
-        >
-          <View style={[styles.contextMenu, { backgroundColor: surfaceColor }]}>
-            <Pressable
-              style={({ pressed }) => [styles.contextMenuItem, pressed && styles.contextMenuItemPressed]}
-              onPress={handleEditFromMenu}
-            >
-              <Ionicons name="pencil-outline" size={20} color={accentColor} />
-              <Text style={[styles.contextMenuText, { color: textColor }]}>Edytuj</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.contextMenuItem, pressed && styles.contextMenuItemPressed]}
-              onPress={handleDeleteFromMenu}
-            >
-              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-              <Text style={[styles.contextMenuText, { color: "#FF3B30" }]}>Usuń</Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
-
       {!embedded && (
         <Pressable
-          onPress={() => setShowAddModal(true)}
+          onPress={openAddModal}
           style={({ pressed }) => [
             styles.floatingButton,
             pressed && { opacity: 0.8 },
@@ -745,25 +718,17 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: "center",
   },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   hintText: {
     fontSize: 12,
     fontStyle: "italic",
-  },
-  editBtn: {
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: "rgba(33, 150, 243, 0.1)",
-  },
-  editBtnPressed: {
-    backgroundColor: "rgba(33, 150, 243, 0.2)",
-  },
-  deleteBtn: {
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: "rgba(255, 59, 48, 0.1)",
-  },
-  deleteBtnPressed: {
-    backgroundColor: "rgba(255, 59, 48, 0.2)",
   },
   emptyContainer: {
     alignItems: "center",
@@ -841,36 +806,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: "600",
-  },
-  contextMenuOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  contextMenu: {
-    borderRadius: 12,
-    paddingVertical: 8,
-    minWidth: 150,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  contextMenuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  contextMenuItemPressed: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-  contextMenuText: {
-    fontSize: 16,
-    fontWeight: "500",
   },
   statsContainer: {
     flexDirection: "row",

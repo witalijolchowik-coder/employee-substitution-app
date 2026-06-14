@@ -7,7 +7,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
-import { CustomSplashScreen } from "@/components/splash-screen";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -28,8 +27,7 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-// Hide splash screen on app load
-SplashScreen.hideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -43,10 +41,15 @@ export default function RootLayout() {
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {
     initManusRuntime();
-    // Mark app as ready after a short delay to show custom splash screen
     const timer = setTimeout(() => setAppReady(true), 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (appReady) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [appReady]);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
     setInsets(metrics.insets);
@@ -80,9 +83,8 @@ export default function RootLayout() {
     [initialFrame, initialInsets],
   );
 
-  // Show custom splash screen while app is loading
   if (!appReady) {
-    return <CustomSplashScreen onComplete={() => setAppReady(true)} />;
+    return null;
   }
 
   const content = (
