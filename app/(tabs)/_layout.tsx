@@ -44,6 +44,7 @@ export default function TabLayout() {
         name="employees"
         options={{
           title: "Pracownicy",
+          href: null,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
@@ -52,6 +53,13 @@ export default function TabLayout() {
         options={{
           title: "Statystyka",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Ustawienia",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
         }}
       />
     </Tabs>

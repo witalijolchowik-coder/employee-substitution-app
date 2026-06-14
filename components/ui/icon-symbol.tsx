@@ -22,6 +22,7 @@ const MAPPING: IconMapping = {
   "person.fill": "person",
   "description.fill": "insert-drive-file",
   "chart.bar.fill": "bar-chart",
+  "gearshape.fill": "settings",
 };
 
 /**

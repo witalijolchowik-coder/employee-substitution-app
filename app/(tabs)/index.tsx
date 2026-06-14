@@ -24,6 +24,17 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Colors } from "@/constants/theme";
+import {
+  AGENCIES_STORAGE_KEY,
+  DEFAULT_EMAIL_TEMPLATE,
+  EMAIL_TEMPLATE_STORAGE_KEY,
+  type Agency,
+  type EmailTemplate,
+  FALLBACK_AGENCIES,
+  normalizeAgencies,
+  normalizeEmailTemplate,
+  renderEmailTemplate,
+} from "@/lib/substitution-settings";
 
 // GitHub Gist URLs
 const EMPLOYEES_URL =
@@ -48,20 +59,6 @@ const FALLBACK_EMPLOYEES = [
   "Andrii Stovbchatyi",
   "Artem Fedoreikov",
 ];
-
-const FALLBACK_AGENCIES = [
-  { name: "OPUS", email: "olena.opusapt@gmail.com" },
-  { name: "Fast Service", email: "v.shepel@fast-service.com.pl" },
-  { name: "Topping Work", email: "veranika.dubrouskaya@topping-work.pl" },
-  { name: "Work Unit", email: "koordynator-idl@workunit.pl" },
-  { name: "MadMax", email: "k.volkova@madmaxwork.pl" },
-  { name: "MS Group", email: "v.mutovchy@msgroup.hr" },
-];
-
-interface Agency {
-  name: string;
-  email: string;
-}
 
 // Autocomplete dropdown component
 function AutocompleteDropdown({
@@ -224,6 +221,7 @@ export default function HomeScreen() {
   const [employees, setEmployees] = useState<string[]>(FALLBACK_EMPLOYEES);
   const [employeeObjects, setEmployeeObjects] = useState<any[]>([]); // Full employee objects with departments
   const [agencies, setAgencies] = useState<Agency[]>(FALLBACK_AGENCIES);
+  const [emailTemplate, setEmailTemplate] = useState<EmailTemplate>(DEFAULT_EMAIL_TEMPLATE);
   const [loading, setLoading] = useState(false);
     // Removed refreshing state - no longer needed
 
@@ -341,7 +339,8 @@ export default function HomeScreen() {
     try {
       console.log("[Cache] Loading cached data from AsyncStorage...");
       const employeesList = await AsyncStorage.getItem("employees_list");
-      const cachedAgencies = await AsyncStorage.getItem("agency_list_cache");
+      const cachedAgencies = await AsyncStorage.getItem(AGENCIES_STORAGE_KEY);
+      const cachedEmailTemplate = await AsyncStorage.getItem(EMAIL_TEMPLATE_STORAGE_KEY);
 
       if (employeesList) {
         const parsed = JSON.parse(employeesList);
@@ -362,12 +361,18 @@ export default function HomeScreen() {
       }
 
       if (cachedAgencies) {
-        const parsed = JSON.parse(cachedAgencies);
+        const parsed = normalizeAgencies(JSON.parse(cachedAgencies));
         console.log("[Cache] Loaded agencies from cache:", parsed.length, "items");
         setAgencies(parsed);
       } else {
         console.log("[Cache] No agencies in cache, using fallback");
         setAgencies(FALLBACK_AGENCIES);
+      }
+
+      if (cachedEmailTemplate) {
+        setEmailTemplate(normalizeEmailTemplate(JSON.parse(cachedEmailTemplate)));
+      } else {
+        setEmailTemplate(DEFAULT_EMAIL_TEMPLATE);
       }
     } catch (error) {
       console.error("[Cache] Error loading cached data:", error);
@@ -388,26 +393,30 @@ export default function HomeScreen() {
     }
 
     const formattedDate = formatDate(date);
-    const subject = `Informuję o zastępstwie / ${formattedDate} / ${shift} / Personnel Service`;
 
     // Get agency email if applicable
     let agencyEmail = "";
     if (showAgencyField && selectedAgency) {
       const agency = agencies.find((a) => a.name === selectedAgency);
-      agencyEmail = agency?.email || "";
+      agencyEmail = agency?.coordinatorEmail || "";
     }
 
     // Determine substitute name
     const substituteName = substituteEmployee;
 
-    // Build email body with selected reason
     const substituteAgency = selectedAgency ? `(${selectedAgency})` : "";
-    const body = `Dzień dobry,
-
-W dniu ${formattedDate} proszę o udzielenie dnia wolnego dla ${absentEmployee}, dział ${absentDepartment} – powód: ${absentReason}.
-Na zastępstwo przyjdzie do pracy ${substituteName} ${substituteAgency} dział ${substituteDepartment}
-
-Pozdrawiam,`;
+    const templateVariables = {
+      date: formattedDate,
+      shift,
+      absentEmployee,
+      absentDepartment,
+      absentReason,
+      substituteEmployee: substituteName,
+      substituteAgency,
+      substituteDepartment,
+    };
+    const subject = renderEmailTemplate(emailTemplate.subject, templateVariables);
+    const body = renderEmailTemplate(emailTemplate.body, templateVariables);
 
     // Build recipient lists
     const toRecipients = [
@@ -672,7 +681,7 @@ Pozdrawiam,`;
                   >
                     <Picker.Item label="Wybierz agencję..." value="" />
                     {agencies.map((agency) => (
-                      <Picker.Item key={agency.name} label={agency.name} value={agency.name} />
+                      <Picker.Item key={agency.id} label={agency.name} value={agency.name} />
                     ))}
                   </Picker>
                 </View>
