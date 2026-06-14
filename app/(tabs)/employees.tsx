@@ -47,7 +47,7 @@ const FALLBACK_EMPLOYEES = [
   { name: "Artem Fedoreikov", department: "Outbound" },
 ];
 
-export default function EmployeesScreen() {
+export default function EmployeesScreen({ embedded = false }: { embedded?: boolean }) {
   const insets = useSafeAreaInsets();
 
   // Unified deep dark blue theme
@@ -293,18 +293,20 @@ export default function EmployeesScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: Math.max(insets.top, 20),
+            paddingTop: embedded ? 16 : Math.max(insets.top, 20),
             paddingBottom: Math.max(insets.bottom, 20),
           },
         ]}
       >
         {/* Header */}
-        <View style={styles.headerSection}>
-          <Text style={[styles.headerTitle, { color: textColor }]}>Pracownicy</Text>
-          <Text style={[styles.headerSubtitle, { color: labelColor }]}>
-            Personnel Service - {employees.filter((e) => !e.isExternal).length} pracowników
-          </Text>
-        </View>
+        {!embedded && (
+          <View style={styles.headerSection}>
+            <Text style={[styles.headerTitle, { color: textColor }]}>Pracownicy</Text>
+            <Text style={[styles.headerSubtitle, { color: labelColor }]}>
+              Personnel Service - {employees.filter((e) => !e.isExternal).length} pracowników
+            </Text>
+          </View>
+        )}
 
         {/* Add button */}
         <Pressable
@@ -533,16 +535,17 @@ export default function EmployeesScreen() {
         </Pressable>
       </Modal>
 
-      {/* Floating Add Button */}
-      <Pressable
-        onPress={() => setShowAddModal(true)}
-        style={({ pressed }) => [
-          styles.floatingButton,
-          pressed && { opacity: 0.8 },
-        ]}
-      >
-        <Ionicons name="add" size={28} color="#FFF" />
-      </Pressable>
+      {!embedded && (
+        <Pressable
+          onPress={() => setShowAddModal(true)}
+          style={({ pressed }) => [
+            styles.floatingButton,
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <Ionicons name="add" size={28} color="#FFF" />
+        </Pressable>
+      )}
     </View>
   );
 }

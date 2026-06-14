@@ -386,6 +386,21 @@ export default function HomeScreen() {
     return `${day}.${month}.${year}`;
   };
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+      if (event.type !== "set" || !selectedDate) {
+        return;
+      }
+    }
+
+    if (!selectedDate) {
+      return;
+    }
+
+    setDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()));
+  };
+
   const handleSendEmail = async () => {
     if (!absentEmployee || !substituteEmployee) {
       alert("Proszę wypełnić wszystkie pola");
@@ -583,31 +598,7 @@ export default function HomeScreen() {
                 value={date}
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(event: any, selectedDate?: Date) => {
-                  if (Platform.OS === "android") {
-                    // Android: close picker immediately
-                    setShowDatePicker(false);
-                    // Only update date if user selected (not cancelled)
-                    if (event.type === "set" && selectedDate) {
-                      // Compare dates to avoid duplicate updates
-                      const selectedTime = new Date(selectedDate).setHours(0, 0, 0, 0);
-                      const currentTime = date.setHours(0, 0, 0, 0);
-                      if (selectedTime !== currentTime) {
-                        setDate(selectedDate);
-                      }
-                    }
-                  } else {
-                    // iOS: keep picker open until user confirms
-                    if (selectedDate) {
-                      // Compare dates to avoid duplicate updates
-                      const selectedTime = new Date(selectedDate).setHours(0, 0, 0, 0);
-                      const currentTime = date.setHours(0, 0, 0, 0);
-                      if (selectedTime !== currentTime) {
-                        setDate(selectedDate);
-                      }
-                    }
-                  }
-                }}
+                onChange={handleDateChange}
               />
             )}
 

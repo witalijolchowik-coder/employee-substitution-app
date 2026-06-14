@@ -50,7 +50,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.content}>
-        {selectedTab === "employees" && <EmployeesScreen />}
+        {selectedTab === "employees" && <EmployeesScreen embedded />}
         {selectedTab === "agencies" && <AgenciesSettings />}
         {selectedTab === "email" && <EmailTemplateSettings />}
       </View>

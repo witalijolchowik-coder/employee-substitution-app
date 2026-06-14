@@ -1,13 +1,30 @@
-import React, { useEffect } from "react";
-import { View, Image, StyleSheet } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, View } from "react-native";
 
 interface CustomSplashScreenProps {
   onComplete?: () => void;
 }
 
 export function CustomSplashScreen({ onComplete }: CustomSplashScreenProps) {
+  const opacity = useRef(new Animated.Value(0.96)).current;
+  const scale = useRef(new Animated.Value(0.98)).current;
+
   useEffect(() => {
-    // Simple timeout - no animations, no state changes
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 650,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 650,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     const timer = setTimeout(() => {
       onComplete?.();
     }, 2000);
@@ -17,9 +34,9 @@ export function CustomSplashScreen({ onComplete }: CustomSplashScreenProps) {
 
   return (
     <View style={styles.container}>
-      <Image
+      <Animated.Image
         source={require("@/assets/images/header-combined.png")}
-        style={styles.logo}
+        style={[styles.logo, { opacity, transform: [{ scale }] }]}
         resizeMode="contain"
       />
     </View>
