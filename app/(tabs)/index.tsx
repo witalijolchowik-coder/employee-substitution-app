@@ -41,6 +41,7 @@ const EMPLOYEES_URL =
   "https://gist.githubusercontent.com/witalijolchowik-coder/3f56631351c945b27d54f05239ecd7ea/raw/44aa34f8ca86c46927214a259ec981e05621304c/gistfile1.txt";
 const AGENCIES_URL =
   "https://gist.githubusercontent.com/witalijolchowik-coder/3f56631351c945b27d54f05239ecd7ea/raw/44aa34f8ca86c46927214a259ec981e05621304c/gistfile2.txt";
+const SELECTED_DATE_STORAGE_KEY = "selected_absence_date";
 
 // Fallback data
 const FALLBACK_EMPLOYEES = [
@@ -79,6 +80,15 @@ function AutocompleteDropdown({
   textColor: string;
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (blurTimerRef.current) {
+        clearTimeout(blurTimerRef.current);
+      }
+    };
+  }, []);
 
   // Filter data based on input
   const filteredData = data.filter((item) =>
@@ -86,9 +96,19 @@ function AutocompleteDropdown({
   );
 
   const handleSelectItem = (item: string) => {
+    if (blurTimerRef.current) {
+      clearTimeout(blurTimerRef.current);
+    }
     onChangeText(item);
     onSelect(item);
     setShowDropdown(false);
+  };
+
+  const closeDropdownSoon = () => {
+    if (blurTimerRef.current) {
+      clearTimeout(blurTimerRef.current);
+    }
+    blurTimerRef.current = setTimeout(() => setShowDropdown(false), 300);
   };
 
   return (
@@ -102,19 +122,25 @@ function AutocompleteDropdown({
         }}
         placeholder={placeholder}
         placeholderTextColor="#6B6B6B"
-        onFocus={() => setShowDropdown(value.length > 0 || data.length > 0)}
-        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+        onFocus={() => {
+          if (blurTimerRef.current) {
+            clearTimeout(blurTimerRef.current);
+          }
+          setShowDropdown(value.length > 0 || data.length > 0);
+        }}
+        onBlur={closeDropdownSoon}
       />
       {showDropdown && filteredData.length > 0 && (
         <View style={[styles.dropdownList, { backgroundColor: surfaceColor }]}>
           <FlatList
             data={filteredData}
-            keyExtractor={(item) => item}
+            keyExtractor={(item, index) => `${item}_${index}`}
             scrollEnabled={false}
+            keyboardShouldPersistTaps="always"
             renderItem={({ item }) => (
               <Pressable
                 style={styles.dropdownItem}
-                onPress={() => handleSelectItem(item)}
+                onPressIn={() => handleSelectItem(item)}
               >
                 <Text style={{ color: textColor, fontSize: 16 }}>{item}</Text>
               </Pressable>
@@ -243,6 +269,7 @@ export default function HomeScreen() {
   // Load cached data on mount and subscribe to employee list changes
   useEffect(() => {
     loadCachedData();
+    loadSelectedDate();
     // Set up interval to check for employee list updates
     const interval = setInterval(() => {
       loadCachedData();
@@ -386,19 +413,53 @@ export default function HomeScreen() {
     return `${day}.${month}.${year}`;
   };
 
+  const createStoredDate = (selectedDate: Date) =>
+    new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      12,
+      0,
+      0,
+      0
+    );
+
+  const loadSelectedDate = async () => {
+    try {
+      const storedDate = await AsyncStorage.getItem(SELECTED_DATE_STORAGE_KEY);
+      if (!storedDate) {
+        return;
+      }
+
+      const parsed = new Date(storedDate);
+      if (!Number.isNaN(parsed.getTime())) {
+        setDate(createStoredDate(parsed));
+      }
+    } catch (error) {
+      console.error("[Date] Error loading selected date:", error);
+    }
+  };
+
+  const commitSelectedDate = async (selectedDate: Date) => {
+    const nextDate = createStoredDate(selectedDate);
+    setDate(nextDate);
+    try {
+      await AsyncStorage.setItem(SELECTED_DATE_STORAGE_KEY, nextDate.toISOString());
+    } catch (error) {
+      console.error("[Date] Error saving selected date:", error);
+    }
+  };
+
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === "android") {
       setShowDatePicker(false);
-      if (event.type !== "set" || !selectedDate) {
-        return;
-      }
     }
 
-    if (!selectedDate) {
+    if (!selectedDate || event?.type === "dismissed") {
       return;
     }
 
-    setDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()));
+    void commitSelectedDate(selectedDate);
   };
 
   const handleSendEmail = async () => {
@@ -518,7 +579,7 @@ export default function HomeScreen() {
     setSubstituteEmployee("");
     setSubstituteDepartment("Outbound");
     setSelectedAgency("");
-    setDate(new Date());
+    void commitSelectedDate(new Date());
     setShowAgencyField(false);
   };
 

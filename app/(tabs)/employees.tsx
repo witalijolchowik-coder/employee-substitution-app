@@ -16,6 +16,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -24,7 +26,6 @@ interface Employee {
   id: string;
   name: string;
   department: string;
-  employmentDate?: string; // Format: DD.MM.YYYY
   agency?: string; // For external employees
   isExternal: boolean;
 }
@@ -64,7 +65,6 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newEmployeeName, setNewEmployeeName] = useState("");
   const [newEmployeeDepartment, setNewEmployeeDepartment] = useState("Outbound");
-  const [newEmployeeDate, setNewEmployeeDate] = useState("");
   const [selectedEmployeeForMenu, setSelectedEmployeeForMenu] = useState<Employee | null>(null);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [statistics, setStatistics] = useState<Record<string, { zastepca: number; nieobecny: number }>>({});
@@ -129,6 +129,117 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
     setNewEmployeeName("");
     setNewEmployeeDepartment("Outbound");
     setShowAddModal(false);
+  };
+
+  const detectCsvDelimiter = (line: string) => {
+    const delimiters = [",", ";", "\t"];
+    let bestDelimiter = ",";
+    let bestCount = 0;
+
+    delimiters.forEach((delimiter) => {
+      let count = 0;
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === delimiter && !inQuotes) {
+          count += 1;
+        }
+      }
+      if (count > bestCount) {
+        bestCount = count;
+        bestDelimiter = delimiter;
+      }
+    });
+
+    return bestDelimiter;
+  };
+
+  const parseCsvLine = (line: string, delimiter: string) => {
+    const cells: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i += 1) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+
+      if (char === '"' && inQuotes && nextChar === '"') {
+        current += '"';
+        i += 1;
+      } else if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === delimiter && !inQuotes) {
+        cells.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+
+    cells.push(current.trim());
+    return cells.map((cell) => cell.replace(/^\uFEFF/, ""));
+  };
+
+  const importEmployeesFromCsv = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["text/csv", "text/comma-separated-values", "application/csv", "application/vnd.ms-excel"],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      const file = result.assets[0];
+      const csvText = await FileSystem.readAsStringAsync(file.uri);
+      const lines = csvText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      if (lines.length === 0) {
+        Alert.alert("Import CSV", "Plik CSV jest pusty.");
+        return;
+      }
+
+      const delimiter = detectCsvDelimiter(lines[0]);
+      const existingNames = new Set(employees.map((employee) => employee.name.trim().toLowerCase()));
+      const importedEmployees: Employee[] = [];
+
+      lines.forEach((line, index) => {
+        const [firstName, lastName] = parseCsvLine(line, delimiter);
+        const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+        const normalizedName = fullName.toLowerCase();
+
+        if (!fullName || existingNames.has(normalizedName)) {
+          return;
+        }
+
+        existingNames.add(normalizedName);
+        importedEmployees.push({
+          id: `emp_csv_${Date.now()}_${index}`,
+          name: fullName,
+          department: "Outbound",
+          isExternal: false,
+        });
+      });
+
+      if (importedEmployees.length === 0) {
+        Alert.alert("Import CSV", "Nie znaleziono nowych pracownikow do dodania.");
+        return;
+      }
+
+      const updated = [...employees, ...importedEmployees];
+      setEmployees(updated);
+      await AsyncStorage.setItem("employees_list", JSON.stringify(updated));
+      Alert.alert("Import CSV", `Dodano pracownikow: ${importedEmployees.length}`);
+    } catch (error) {
+      console.error("Error importing employees CSV:", error);
+      Alert.alert("Import CSV", "Nie udalo sie zaimportowac pliku CSV.");
+    }
   };
 
   const editEmployee = async () => {
@@ -308,17 +419,30 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
           </View>
         )}
 
-        {/* Add button */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.addButton,
-            { backgroundColor: accentColor, opacity: pressed ? 0.8 : 1 },
-          ]}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Ionicons name="add" size={24} color="#FFF" />
-          <Text style={styles.addButtonText}>Dodaj pracownika</Text>
-        </Pressable>
+        <View style={styles.toolbar}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.toolbarButton,
+              { backgroundColor: accentColor, opacity: pressed ? 0.8 : 1 },
+            ]}
+            onPress={() => setShowAddModal(true)}
+          >
+            <Ionicons name="add" size={22} color="#FFF" />
+            <Text style={styles.addButtonText}>Dodaj</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.toolbarButton,
+              styles.importButton,
+              { borderColor: accentColor, opacity: pressed ? 0.8 : 1 },
+            ]}
+            onPress={importEmployeesFromCsv}
+          >
+            <Ionicons name="cloud-upload-outline" size={22} color={accentColor} />
+            <Text style={[styles.importButtonText, { color: accentColor }]}>Import CSV</Text>
+          </Pressable>
+        </View>
 
         {/* Employee list */}
         {loading ? (
@@ -384,20 +508,6 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
                     ))}
                   </Picker>
                 </View>
-              </View>
-
-              <View style={styles.formField}>
-                <Text style={[styles.formLabel, { color: labelColor }]}>Data zatrudnienia</Text>
-                <TextInput
-                  style={[
-                    styles.formInput,
-                    { color: textColor, backgroundColor: backgroundColor, borderColor: accentColor },
-                  ]}
-                  placeholder="DD.MM.YYYY"
-                  placeholderTextColor={labelColor}
-                  value={newEmployeeDate}
-                  onChangeText={setNewEmployeeDate}
-                />
               </View>
 
               <View style={styles.modalButtons}>
@@ -570,18 +680,33 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
   },
-  addButton: {
+  toolbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginBottom: 20,
+  },
+  toolbarButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    marginBottom: 20,
     gap: 8,
+  },
+  importButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
   },
   addButtonText: {
     color: "#FFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  importButtonText: {
     fontSize: 16,
     fontWeight: "600",
   },
