@@ -41,7 +41,6 @@ const EMPLOYEES_URL =
   "https://gist.githubusercontent.com/witalijolchowik-coder/3f56631351c945b27d54f05239ecd7ea/raw/44aa34f8ca86c46927214a259ec981e05621304c/gistfile1.txt";
 const AGENCIES_URL =
   "https://gist.githubusercontent.com/witalijolchowik-coder/3f56631351c945b27d54f05239ecd7ea/raw/44aa34f8ca86c46927214a259ec981e05621304c/gistfile2.txt";
-const SELECTED_DATE_STORAGE_KEY = "selected_absence_date";
 
 // Fallback data
 const FALLBACK_EMPLOYEES = [
@@ -269,7 +268,6 @@ export default function HomeScreen() {
   // Load cached data on mount and subscribe to employee list changes
   useEffect(() => {
     loadCachedData();
-    loadSelectedDate();
   }, []);
 
   useEffect(() => {
@@ -436,30 +434,9 @@ export default function HomeScreen() {
       0
     );
 
-  const loadSelectedDate = async () => {
-    try {
-      const storedDate = await AsyncStorage.getItem(SELECTED_DATE_STORAGE_KEY);
-      if (!storedDate) {
-        return;
-      }
-
-      const parsed = new Date(storedDate);
-      if (!Number.isNaN(parsed.getTime())) {
-        setDate(createStoredDate(parsed));
-      }
-    } catch (error) {
-      console.error("[Date] Error loading selected date:", error);
-    }
-  };
-
-  const commitSelectedDate = async (selectedDate: Date) => {
+  const commitSelectedDate = (selectedDate: Date) => {
     const nextDate = createStoredDate(selectedDate);
     setDate(nextDate);
-    try {
-      await AsyncStorage.setItem(SELECTED_DATE_STORAGE_KEY, nextDate.toISOString());
-    } catch (error) {
-      console.error("[Date] Error saving selected date:", error);
-    }
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -471,7 +448,7 @@ export default function HomeScreen() {
       return;
     }
 
-    void commitSelectedDate(selectedDate);
+    commitSelectedDate(selectedDate);
   };
 
   const handleSendEmail = async () => {
@@ -591,7 +568,7 @@ export default function HomeScreen() {
     setSubstituteEmployee("");
     setSubstituteDepartment("Outbound");
     setSelectedAgency("");
-    void commitSelectedDate(new Date());
+    commitSelectedDate(new Date());
     setShowAgencyField(false);
   };
 
