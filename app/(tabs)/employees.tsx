@@ -198,6 +198,40 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
     return "Outbound";
   };
 
+  const getKnownEmployeeNames = () =>
+    new Set(
+      [...FALLBACK_EMPLOYEES.map((employee) => employee.name), ...employees.map((employee) => employee.name)]
+        .map((name) => name.trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+  const shouldUseLastNameFirstOrder = (rows: string[][], delimiter: string) => {
+    const knownNames = getKnownEmployeeNames();
+    let normalOrderMatches = 0;
+    let reversedOrderMatches = 0;
+
+    rows.forEach(([firstColumn, secondColumn]) => {
+      const first = firstColumn?.trim();
+      const second = secondColumn?.trim();
+      if (!first || !second) {
+        return;
+      }
+
+      if (knownNames.has(`${first} ${second}`.toLowerCase())) {
+        normalOrderMatches += 1;
+      }
+      if (knownNames.has(`${second} ${first}`.toLowerCase())) {
+        reversedOrderMatches += 1;
+      }
+    });
+
+    if (reversedOrderMatches !== normalOrderMatches) {
+      return reversedOrderMatches > normalOrderMatches;
+    }
+
+    return delimiter === ";";
+  };
+
   const importEmployeesFromCsv = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -222,19 +256,24 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
       }
 
       const delimiter = detectCsvDelimiter(lines[0]);
-      const existingNames = new Set(employees.map((employee) => employee.name.trim().toLowerCase()));
+      const rows = lines.map((line) => parseCsvLine(line, delimiter));
+      const useLastNameFirstOrder = shouldUseLastNameFirstOrder(rows, delimiter);
+      const importedNames = new Set<string>();
       const importedEmployees: Employee[] = [];
 
-      lines.forEach((line, index) => {
-        const [firstName, lastName, department] = parseCsvLine(line, delimiter);
-        const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+      rows.forEach(([firstColumn, secondColumn, department], index) => {
+        const first = firstColumn?.trim();
+        const second = secondColumn?.trim();
+        const fullName = useLastNameFirstOrder
+          ? [second, first].filter(Boolean).join(" ").trim()
+          : [first, second].filter(Boolean).join(" ").trim();
         const normalizedName = fullName.toLowerCase();
 
-        if (!fullName || existingNames.has(normalizedName)) {
+        if (!first || !second || importedNames.has(normalizedName)) {
           return;
         }
 
-        existingNames.add(normalizedName);
+        importedNames.add(normalizedName);
         importedEmployees.push({
           id: `emp_csv_${Date.now()}_${index}`,
           name: fullName,
@@ -244,14 +283,16 @@ export default function EmployeesScreen({ embedded = false }: { embedded?: boole
       });
 
       if (importedEmployees.length === 0) {
-        Alert.alert("Import CSV", "Nie znaleziono nowych pracownikow do dodania.");
+        Alert.alert("Import CSV", "Nie znaleziono pracownikow w pliku CSV.");
         return;
       }
 
-      const updated = [...employees, ...importedEmployees];
-      setEmployees(updated);
-      await AsyncStorage.setItem("employees_list", JSON.stringify(updated));
-      Alert.alert("Import CSV", `Dodano pracownikow: ${importedEmployees.length}`);
+      setEmployees(importedEmployees);
+      await AsyncStorage.setItem("employees_list", JSON.stringify(importedEmployees));
+      Alert.alert(
+        "Import CSV",
+        `Zaimportowano pracownikow: ${importedEmployees.length}. Poprzednia lista zostala zastapiona.`
+      );
     } catch (error) {
       console.error("Error importing employees CSV:", error);
       Alert.alert("Import CSV", "Nie udalo sie zaimportowac pliku CSV.");
